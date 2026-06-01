@@ -75,7 +75,10 @@ Then print a one-line project status before proceeding.
 
 ## Build Sequence (follow this order exactly)
 
-1. `/scaffold [app description]` — generate folder structure
+1. `/scaffold [app description]` — runs a context interview (via the
+   `deep-interview` skill), presents an Interview Debrief plus the proposed
+   folder structure and tech stack, and waits for explicit approval before
+   generating anything. Never scaffold from the one-line description alone.
 2. Invoke `backend-builder` — build API layer, produce API Contract Summary
 3. Invoke `reviewer` — review backend output; loop until approved
 4. Invoke `frontend-builder` — build UI layer using API Contract Summary
