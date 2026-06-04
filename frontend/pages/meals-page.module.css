@@ -1,0 +1,393 @@
+/* Styles for the MealsPage */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.newBtn {
+  padding: 0.5rem 1.2rem;
+  background: #3d6b2e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.newBtn:hover {
+  background: #1b5e20;
+}
+
+.secondaryBtn {
+  padding: 0.5rem 1.2rem;
+  background: #f6faf4;
+  color: #2f5725;
+  border: 1px solid #c7d6bf;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.secondaryBtn:hover {
+  background: #e7f2e2;
+}
+
+.formSection {
+  background: #fff;
+  border: 1px solid #e8ddd0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.existingSection {
+  background: #fff;
+  border: 1px solid #e8ddd0;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.existingControls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.addExistingBtn {
+  padding: 0.45rem 1rem;
+  background: #3d6b2e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.addExistingBtn:hover:not(:disabled) {
+  background: #1b5e20;
+}
+
+.addExistingBtn:disabled {
+  background: #d8d8d8;
+  color: #757575;
+}
+
+.emptyInline {
+  margin-top: 0.75rem;
+  color: #757575;
+  font-size: 0.9rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.formLeft,
+.formRight {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.input,
+.select {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input:focus,
+.select:focus {
+  outline: 2px solid #3d6b2e;
+  border-color: transparent;
+}
+
+.fieldset {
+  border: 1px solid #e8ddd0;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0 0.25rem;
+}
+
+.ingredientRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.select {
+  flex: 2;
+}
+
+.unitSelect {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 1rem;
+  min-width: 86px;
+}
+
+.pricePreview {
+  color: #3d6b2e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.quickFillGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.quickFillBtn {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #c7d6bf;
+  border-radius: 4px;
+  background: #f6faf4;
+  color: #2f5725;
+  font-size: 0.8rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.quickFillBtn:hover:not(:disabled) {
+  background: #e7f2e2;
+}
+
+.quickFillBtn:disabled {
+  color: #9e9e9e;
+  border-color: #d8d8d8;
+  background: #f5f5f5;
+}
+
+.qtyInput {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  font-size: 1rem;
+  flex: 1;
+  min-width: 70px;
+}
+
+.qtyInput:focus,
+.unitSelect:focus {
+  outline: 2px solid #3d6b2e;
+  border-color: transparent;
+}
+
+.removeRowBtn {
+  background: none;
+  border: none;
+  color: #c62828;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.addRowBtn {
+  background: none;
+  border: none;
+  color: #3d6b2e;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 0.25rem;
+  padding: 0;
+}
+
+.addRowBtn:hover {
+  text-decoration: underline;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.saveBtn {
+  padding: 0.5rem 1.2rem;
+  background: #3d6b2e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.saveBtn:hover {
+  background: #1b5e20;
+}
+
+.cancelBtn {
+  padding: 0.5rem 1.2rem;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.cancelBtn:hover {
+  background: #e8ddd0;
+}
+
+.table {
+  background: #fff;
+  border: 1px solid #e8ddd0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.empty {
+  text-align: center;
+  color: #757575;
+  padding: 2rem 0;
+}
+
+.mealName {
+  display: block;
+  font-weight: 500;
+}
+
+.mealToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+}
+
+.mealToggle:hover .mealName {
+  color: #1b5e20;
+}
+
+.chevron {
+  width: 1rem;
+  color: #3d6b2e;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.mealDesc {
+  display: block;
+  font-size: 0.85rem;
+  color: #757575;
+}
+
+.cost {
+  font-weight: 600;
+  color: #3d6b2e;
+}
+
+.editBtn {
+  padding: 0.3rem 0.75rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+}
+
+.editBtn:hover {
+  background: #bbdefb;
+}
+
+.deleteBtn {
+  padding: 0.3rem 0.75rem;
+  background: #fdecea;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.deleteBtn:hover {
+  background: #ffcdd2;
+}
+
+.detailRow td {
+  background: #fbfaf8;
+  border-top: 1px solid #f0e8df;
+  padding: 0.75rem 1rem;
+}
+
+.ingredientDetailList {
+  display: grid;
+  grid-template-columns: max-content max-content max-content;
+  column-gap: 1rem;
+  row-gap: 0.4rem;
+}
+
+.ingredientDetailItem {
+  display: contents;
+  font-size: 0.9rem;
+}
+
+.ingredientDetailName {
+  font-weight: 600;
+}
+
+.ingredientDetailMeta {
+  color: #3d6b2e;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .ingredientDetailList {
+    grid-template-columns: 1fr;
+    row-gap: 0.75rem;
+  }
+
+  .ingredientDetailItem {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}

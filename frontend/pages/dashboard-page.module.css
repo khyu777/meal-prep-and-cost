@@ -1,0 +1,350 @@
+/* Dashboard page styles — PantryPlan warm aesthetic */
+.page {
+  max-width: 1100px;
+}
+
+/* ── Header ── */
+.pageHeader {
+  margin-bottom: 1.75rem;
+}
+
+.greeting {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: #1e2d1a;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: #6b7c5e;
+  margin-top: 0.2rem;
+}
+
+/* ── Stat cards ── */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.statCard {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 4px rgba(37, 50, 24, 0.07);
+  border: 1px solid #ede5d8;
+}
+
+.statIcon {
+  font-size: 1.7rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8a9e7a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.statValue {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #1e2d1a;
+  line-height: 1;
+}
+
+.statSub {
+  font-size: 0.75rem;
+  color: #7a9060;
+  margin-top: 0.3rem;
+}
+
+/* ── Two-column panels ── */
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(37, 50, 24, 0.07);
+  border: 1px solid #ede5d8;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #f0e8d8;
+}
+
+.panelTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2a3d22;
+}
+
+/* ── Meal list ── */
+.mealList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mealItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f5ede0;
+}
+
+.mealItem:last-child {
+  border-bottom: none;
+}
+
+.mealInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.mealName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e2d1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mealDesc {
+  font-size: 0.75rem;
+  color: #8a9e7a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mealMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.mealCost {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3d6b2e;
+}
+
+.mealServings {
+  font-size: 0.75rem;
+  color: #8a9e7a;
+  background: #f0ead8;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+}
+
+/* ── Ingredient list ── */
+.ingredientList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ingredientItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f5ede0;
+}
+
+.ingredientItem:last-child {
+  border-bottom: none;
+}
+
+.ingredientDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6fa84a;
+  flex-shrink: 0;
+}
+
+.ingredientName {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #1e2d1a;
+  font-weight: 500;
+}
+
+.ingredientStock {
+  font-size: 0.75rem;
+  color: #8a9e7a;
+}
+
+.ingredientPrice {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3d6b2e;
+  min-width: 50px;
+  text-align: right;
+}
+
+.moreNote {
+  font-size: 0.75rem;
+  color: #8a9e7a;
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+/* ── Active plan panel ── */
+.planPanel {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(37, 50, 24, 0.07);
+  border: 1px solid #ede5d8;
+}
+
+.planCost {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #3d6b2e;
+  background: #e8f5e0;
+  padding: 0.2rem 0.75rem;
+  border-radius: 99px;
+}
+
+.planList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.planItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f5ede0;
+}
+
+.planItem:last-child {
+  border-bottom: none;
+}
+
+.planDay {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #8a9e7a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 32px;
+}
+
+.planMealName {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #1e2d1a;
+  font-weight: 500;
+}
+
+.planServings {
+  font-size: 0.75rem;
+  color: #8a9e7a;
+  background: #f0ead8;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+}
+
+.planItemCost {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #3d6b2e;
+  min-width: 55px;
+  text-align: right;
+}
+
+/* ── Week meal cards ── */
+.weekMealGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.65rem;
+}
+
+.weekMealCard {
+  background: #f7f2eb;
+  border: 1px solid #e8dece;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.weekMealDay {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8a9e7a;
+}
+
+.weekMealName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e2d1a;
+  line-height: 1.3;
+}
+
+.weekMealFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+.weekMealServings {
+  font-size: 0.7rem;
+  color: #8a9e7a;
+  background: #ede5d8;
+  padding: 0.1rem 0.4rem;
+  border-radius: 99px;
+}
+
+.weekMealCost {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #3d6b2e;
+}
+
+/* ── Shared ── */
+.empty {
+  font-size: 0.85rem;
+  color: #a0b090;
+  text-align: center;
+  padding: 1.5rem 0;
+}

@@ -1,0 +1,319 @@
+/* Styles for the PlansPage */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.newBtn {
+  padding: 0.5rem 1.2rem;
+  background: #3d6b2e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.newBtn:hover {
+  background: #1b5e20;
+}
+
+/* ── Form ── */
+.formSection {
+  background: #fff;
+  border: 1px solid #e8ddd0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* 7-column day grid */
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.dayColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 110px;
+}
+
+.dayHeader {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+  text-align: center;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid #e8ddd0;
+  margin-bottom: 0.25rem;
+}
+
+.dayMealRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: #f9f6f2;
+  border: 1px solid #e8ddd0;
+  border-radius: 5px;
+  padding: 0.4rem;
+  position: relative;
+}
+
+.daySelect {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.daySelect:focus {
+  outline: 2px solid #3d6b2e;
+  border-color: transparent;
+}
+
+.servingsInput {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.servingsInput:focus {
+  outline: 2px solid #3d6b2e;
+  border-color: transparent;
+}
+
+.removeRowBtn {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.3rem;
+  background: none;
+  border: none;
+  color: #c62828;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.addDayBtn {
+  background: none;
+  border: 1px dashed #bdbdbd;
+  border-radius: 4px;
+  color: #3d6b2e;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  text-align: center;
+  width: 100%;
+}
+
+.addDayBtn:hover {
+  background: #f0f7ee;
+  border-color: #3d6b2e;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.saveBtn {
+  padding: 0.5rem 1.2rem;
+  background: #3d6b2e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.saveBtn:hover {
+  background: #1b5e20;
+}
+
+.cancelBtn {
+  padding: 0.5rem 1.2rem;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background: #e8ddd0;
+}
+
+/* ── Plan list ── */
+.planList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.empty {
+  text-align: center;
+  color: #757575;
+  padding: 2rem 0;
+}
+
+.planCard {
+  background: #fff;
+  border: 1px solid #e8ddd0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.planHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.planName {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.planRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.planCost {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #3d6b2e;
+}
+
+.planActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.refreshBtn {
+  padding: 0.3rem 0.75rem;
+  background: #f1f8e9;
+  color: #33691e;
+  border: 1px solid #aed581;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.refreshBtn:hover {
+  background: #dcedc8;
+}
+
+.refreshBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.editBtn {
+  padding: 0.3rem 0.75rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.editBtn:hover {
+  background: #bbdefb;
+}
+
+/* 7-column card grid */
+.cardWeekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+}
+
+.cardDayCol {
+  border-right: 1px solid #f0f0f0;
+  padding: 0.6rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.cardDayCol:last-child {
+  border-right: none;
+}
+
+.cardDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.cardDayCost {
+  color: #3d6b2e;
+  white-space: nowrap;
+}
+
+.cardEmpty {
+  font-size: 0.8rem;
+  color: #ccc;
+}
+
+.cardMealChip {
+  background: #f0f7ee;
+  border: 1px solid #c8e6c9;
+  border-radius: 4px;
+  padding: 0.3rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cardMealName {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1b5e20;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMealMeta {
+  font-size: 0.7rem;
+  color: #555;
+}

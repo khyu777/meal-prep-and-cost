@@ -1,0 +1,66 @@
+// Prisma schema for the Meal Prep & Cost Planner — SQLite provider
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Ingredient {
+  id                      Int               @id @default(autoincrement())
+  name                    String
+  quantity                Decimal
+  price                   Decimal
+  weightPerQuantityGrams  Decimal
+  stockWeightGrams        Decimal           @default(0)
+  createdAt               DateTime          @default(now())
+  meals                   MealIngredient[]
+}
+
+model Meal {
+  id          Int               @id @default(autoincrement())
+  name        String
+  description String?
+  servings    Int
+  createdAt   DateTime          @default(now())
+  ingredients MealIngredient[]
+  planItems   MealPlanItem[]
+}
+
+model MealIngredient {
+  meal         Meal       @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  mealId       Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  ingredientId Int
+  quantity     Decimal
+
+  @@id([mealId, ingredientId])
+  @@index([mealId])
+  @@index([ingredientId])
+}
+
+model MealPlan {
+  id        Int            @id @default(autoincrement())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime       @default(now())
+  items     MealPlanItem[]
+}
+
+model MealPlanItem {
+  plan                   MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId                 Int
+  meal                   Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  mealId                 Int
+  dayOfWeek              Int
+  servings               Int
+  snapshotCostPerServing Decimal  @default(0)
+
+  @@id([planId, mealId, dayOfWeek])
+  @@index([planId])
+  @@index([mealId])
+}

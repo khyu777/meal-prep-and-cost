@@ -1,8 +1,9 @@
 # Project Overview
 
-This is a stack-agnostic app scaffold. Claude Code is the primary builder.
-When starting a new project, generate the full folder structure first, then
-proceed to backend and frontend in that order. Never skip the scaffold step.
+This is the Meal Prep & Cost Planner — a React + TypeScript frontend backed by a
+Node/Express + TypeScript API with Prisma and SQLite. Users create meals with
+ingredients, assign them to weekly plans, and see per-serving and total costs.
+Claude Code is the primary builder; follow the build sequence below.
 
 # Folder Structure (enforce this always)
 
@@ -31,8 +32,10 @@ project-root/
 
 # Tech Stack
 
-Stack-agnostic. Claude should not assume a framework unless explicitly told.
-When a stack is chosen, update this section before writing any code.
+- **Frontend:** React 18 + TypeScript, Vite, React Router v6
+- **Backend:** Node.js + Express + TypeScript
+- **Database:** Prisma ORM + SQLite
+- **Testing:** Vitest + Testing Library (frontend), Jest + Supertest (backend)
 
 # Conventions & Standards
 
