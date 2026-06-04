@@ -25,10 +25,13 @@ cd backend && npx prisma generate && npx prisma migrate dev && cd ..
 ## Running the app
 
 ```bash
-# Backend (port 3001 by default)
-cd backend && npm run dev
+# Run both together (recommended)
+npm run dev
 
-# Frontend (port 5173 by default)
+# Or separately:
+# Backend (port 3001)
+cd backend && npm run dev
+# Frontend (port 5173)
 cd frontend && npm run dev
 ```
 
@@ -55,22 +58,15 @@ cd frontend && npm run build
 
 ---
 
-## Build tooling (`.claude/`)
+## Claude Code tooling (`.claude/`)
 
-This repo includes a Claude Code build pipeline used during development:
-
-| Agent | Role |
+| Agent / Command | Role |
 |---|---|
-| `backend-builder` | Writes routes, controllers, models, middleware |
-| `frontend-builder` | Writes components, pages, hooks |
-| `reviewer` | Reviews each builder's output |
-| `test-runner` | Runs and fixes tests |
-| `security-auditor` | Scans for vulnerabilities |
-| `performance-agent` | Identifies bottlenecks |
-| `docs-writer` | Writes `docs/architecture.md` |
+| `/meal-planner` | Generate a weekly meal plan and grocery list |
+| `meal-brainstormer` | Suggests meal ideas given user preferences |
+| `meal-analyzer` | Breaks a plan into a grocery list with prices and nutrition |
+| `test-runner` | Runs and iterates on tests until passing |
 | `debugger` | Traces root cause of bugs |
-
-Invoke via `/scaffold`, `/meal-planner`, or the agent names directly inside Claude Code.
 
 ---
 
