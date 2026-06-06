@@ -77,4 +77,5 @@ Read this file. If `docs/architecture.md` exists, read that too. Print a one-lin
 | `test-runner` | agent | Runs and iterates on tests until passing |
 | `debugger` | agent | Traces root cause of bugs |
 | `/meal-planner` | command | End-to-end meal planning flow |
+| `/meal-uploader` | command | Upload a tracker-upload JSON file to the running backend |
 | `/init` | command | Session kickoff |

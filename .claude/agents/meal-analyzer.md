@@ -100,6 +100,27 @@ If no `meal-plan/` files found:
     "protein_g": 420,
     "carbs_g": 820,
     "fat_g": 380
+  },
+  "tracker_upload": {
+    "ingredients": [
+      {
+        "name": "Canned chickpeas",
+        "quantity": 2,
+        "unit": "can (15oz)",
+        "weight_per_quantity_grams": 425,
+        "price": 2.40
+      }
+    ],
+    "meals": [
+      {
+        "name": "Roasted Chickpea Bowl",
+        "description": "Chickpeas tahini cucumber pita",
+        "servings": 2,
+        "ingredients": [
+          { "name": "Canned chickpeas", "grams": 213 }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -215,6 +236,73 @@ around 400–650 cal, 25–40g protein, 40–80g carbs, 10–30g fat.
 Nutrition values are estimates based on standard USDA data and typical recipe
 proportions. Write this disclaimer into `meal-plan.md`:
 `*Nutrition estimates are approximate and based on standard USDA values.*`
+
+---
+
+## Phase 5 — Tracker Upload Payload
+
+Append a `tracker_upload` object to the JSON output. This is what the importer
+(`backend/scripts/import-plan.ts`) POSTs to the running REST API.
+
+```json
+"tracker_upload": {
+  "ingredients": [
+    {
+      "name": "Canned chickpeas",
+      "quantity": 2,
+      "unit": "can (15oz)",
+      "weight_per_quantity_grams": 425,
+      "price": 2.40
+    }
+  ],
+  "meals": [
+    {
+      "name": "Roasted Chickpea Bowl",
+      "description": "Chickpeas tahini cucumber pita",
+      "servings": 2,
+      "ingredients": [
+        { "name": "Canned chickpeas", "grams": 213 }
+      ]
+    }
+  ]
+}
+```
+
+### Rules for `tracker_upload.ingredients`
+- `price` = the grocery item's `usage_cost` from the grocery list.
+- `weight_per_quantity_grams` = total grams for that item ÷ `quantity` (so `pricePerGram` matches the analyzer's numbers).
+- `quantity × weight_per_quantity_grams` **must be ≥ the sum of that ingredient's grams across all meals** — round purchase quantity up so no meal 422s on stock.
+- Include **all** ingredients that appear in any meal, including staples that appear in `recipe_ingredients`.
+- Name must exactly match the names used in `meals[].ingredients[].name`.
+
+### Rules for `tracker_upload.meals[].ingredients[].grams`
+- Use **per-serving-scaled grams** (one adult, standard portion) — not batch-sized.
+- For meal-prep mode, `recipe_ingredients` are batch-sized for display; the tracker needs per-meal grams so the app cost calculation is correct.
+
+### Gram conversion reference
+| Unit | Approx grams |
+|---|---|
+| 1 can (15oz) | 425 g |
+| 1 cup dry rice | 185 g |
+| 1 cup dry quinoa | 185 g |
+| 1 cup dry pasta | 100 g |
+| 1 tbsp oil / butter | 14 g |
+| 1 tbsp tahini / nut butter | 16 g |
+| 1 tsp spice | 3 g |
+| 1 oz | 28 g |
+| 1 lb | 454 g |
+| 1 egg (large) | 50 g |
+| 1 whole onion (medium) | 110 g |
+| 1 garlic head | 50 g |
+| 1 lemon | 100 g |
+| 1 pita (small) | 60 g |
+| 1 slice bread | 30 g |
+| 1 whole tomato (medium) | 120 g |
+| 1 whole cucumber | 200 g |
+| 1 bunch spinach | 170 g |
+| 1 cup Greek yogurt | 245 g |
+| 1 cup milk | 240 g |
+| 1 oz cheddar | 28 g |
 
 ---
 

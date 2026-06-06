@@ -208,6 +208,16 @@ Run `mkdir -p meal-plan` unconditionally — this is a no-op if the directory al
 
 Generate datestamp from current date: `YYYY-MM-DD`.
 
+Also write `meal-plan/tracker-upload-YYYY-MM-DD.json` from `output_json.tracker_upload`:
+
+```json
+{
+  "tracker_upload": { ...output_json.tracker_upload }
+}
+```
+
+This is the portable import file — keep the `tracker_upload` wrapper key so the importer can detect it regardless of how the file was generated.
+
 **Write `meal-plan/meal-plan-YYYY-MM-DD.md`:**
 
 ```
@@ -305,8 +315,40 @@ Generate datestamp from current date: `YYYY-MM-DD`.
 *Nutrition estimates are approximate and based on standard USDA values.*
 ```
 
-Once written, notify the user:
-> "Done. Saved to meal-plan/ (YYYY-MM-DD) — meal plan with recipes, and grocery list."
+Once written, proceed to Step 7 before notifying the user.
+
+---
+
+## Step 7 — Upload to Tracker (confirm gate)
+
+Ask the user:
+
+```
+AskUserQuestion({
+  "title": "Upload to tracker?",
+  "questions": [
+    {
+      "id": "upload",
+      "label": "Upload this plan's ingredients and meals to the tracker?",
+      "type": "select",
+      "options": ["Yes — upload now", "No — I'll do it later with /meal-uploader"]
+    }
+  ]
+})
+```
+
+**If "Yes":**
+1. Run: `curl -s http://localhost:3002/health`
+   - If that fails, tell the user: "The backend isn't running. Start it with `npm run dev` in the `backend/` folder, then run `/meal-uploader` to upload."
+   - Do not proceed further.
+2. Run: `cd backend && npm run import-plan -- ../meal-plan/tracker-upload-YYYY-MM-DD.json`
+3. Report the summary line printed by the importer (ingredients created/reused, meals created/failed).
+
+**If "No":**
+> Note: Run `/meal-uploader` any time to upload `meal-plan/tracker-upload-YYYY-MM-DD.json` to the tracker.
+
+**Either way, notify the user:**
+> "Done. Saved to meal-plan/ (YYYY-MM-DD) — meal plan with recipes, grocery list, and tracker-upload JSON."
 
 ---
 
