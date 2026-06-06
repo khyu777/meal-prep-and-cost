@@ -212,9 +212,10 @@ async function main() {
   // Create a MealPlan for the specified week if --week was given
   let planCreated = false;
   if (weekStart && mealsCreated > 0) {
-    const start = new Date(`${weekStart}T00:00:00.000Z`);
+    const start = new Date(`${weekStart}T00:00:00`);
     const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 6);
+    end.setDate(end.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
 
     // Distribute created meal IDs round-robin across days 0–6
     const planMealIds = createdMealIds;
