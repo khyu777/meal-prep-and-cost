@@ -8,8 +8,8 @@ import { serializeIngredient } from '../utils/ingredient-serializer';
 export const createIngredientSchema = z.object({
   name: z.string().min(1).max(255),
   quantity: z.number().nonnegative(),
-  price: z.number().positive(),
-  weightPerQuantityGrams: z.number().positive(),
+  price: z.number().nonnegative(),
+  weightPerQuantityGrams: z.number().nonnegative(),
 }).strict();
 
 export const updateIngredientSchema = createIngredientSchema.partial().refine(
