@@ -243,28 +243,22 @@ This is the portable import file — keep the `tracker_upload` wrapper key so th
 
 ---
 
-## Recipes
+## Assembly Guide
+
+Each meal is assembled cold or reheated. No stovetop needed at mealtime.
 
 ### Day 1 Lunch — Roasted Chickpea Bowl
+**Ingredients:** Chickpeas — 80g · Cucumber — 120g · Tahini — 30g · Olive oil — 12g · Pita bread — 120g
 
-**Ingredients**
-- 1 can (15oz) chickpeas
-- 1 cucumber, sliced
-- 2 tbsp tahini
-- 1 tbsp olive oil
-- 2 pita breads
-
-**Steps**
-1. Preheat oven to 425°F. Drain and dry chickpeas, toss with olive oil, salt, cumin.
-2. Roast 25–30 min until crispy, shaking halfway.
-3. Whisk tahini with lemon juice and water to make sauce.
-4. Assemble: chickpeas, cucumber, tahini sauce. Serve with warm pita.
+Reheat chickpeas. Top with cucumber slices and tahini sauce. Serve with warm pita.
 
 ---
 
 ### Day 1 Dinner — Lemon Herb Chicken
 ...
 ```
+
+Gram amounts come from `output_json.tracker_upload.meals[i].ingredients[].grams`. Every meal's **Ingredients** line must list each ingredient with its gram amount (e.g. `Chicken thighs — 150g · White rice — 90g`). Use the grams from `tracker_upload`, not the batch-sized quantities from `recipe_ingredients`.
 
 ```
 ## Produce
@@ -289,30 +283,6 @@ This is the portable import file — keep the `tracker_upload` wrapper key so th
 </details>
 
 *Prices are US average estimates and may vary by region and store.*
-```
-
-**Write `meal-plan/meal-plan-YYYY-MM-DD.md`:**
-
-```
-# Meal Plan
-
-| Day | Meal | Description | Cost | Cal | Protein | Carbs | Fat |
-|---|---|---|---|---|---|---|---|
-| Day 1 | Lunch: Roasted Chickpea Bowl | Chickpeas tahini cucumber pita | ~$3.20 | 520 | 18g | 62g | 22g |
-| Day 1 | Dinner: Lemon Herb Chicken | Chicken thighs lemon garlic herbs | ~$4.75 | 480 | 42g | 8g | 28g |
-...
-
-**Total estimated cost: ~$52.40**
-**Weekly nutrition: ~9,800 cal | 420g protein | 820g carbs | 380g fat**
-
-[If budget_ceiling set and under:]
-✅ Under budget ($150.00 ceiling)
-
-[If budget_ceiling set and over:]
-⚠️ Over budget ($150.00 ceiling) — consider swapping high-cost meals
-
-*Prices are US average estimates and may vary by region and store.*
-*Nutrition estimates are approximate and based on standard USDA values.*
 ```
 
 Once written, proceed to Step 7 before notifying the user.
