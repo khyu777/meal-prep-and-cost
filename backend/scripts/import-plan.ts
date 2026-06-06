@@ -117,63 +117,30 @@ async function main() {
   // Build existing ingredient map: name → id
   const existingIngredients = await apiFetch<ApiIngredient[]>('/api/ingredients');
   const nameToId = new Map<string, number>(existingIngredients.map(i => [i.name.toLowerCase(), i.id]));
-  const nameToStock = new Map<string, number>(existingIngredients.map(i => [i.name.toLowerCase(), i.stockWeightGrams]));
-
-  // Compute total grams needed per ingredient across all meals
-  const gramsNeeded = new Map<string, number>();
-  for (const meal of upload.meals) {
-    for (const mi of meal.ingredients) {
-      const key = mi.name.toLowerCase();
-      gramsNeeded.set(key, (gramsNeeded.get(key) ?? 0) + mi.grams);
-    }
-  }
 
   let created = 0;
   let reused = 0;
-  let toppedUp = 0;
 
-  // Create or reuse ingredients
+  // Create new ingredients with 0 stock; skip existing ones
   for (const ing of upload.ingredients) {
     const key = ing.name.toLowerCase();
-    const needed = gramsNeeded.get(key) ?? 0;
 
     if (nameToId.has(key)) {
-      // Reuse — top up stock if insufficient
-      const currentStock = nameToStock.get(key) ?? 0;
-      if (currentStock < needed) {
-        const existingId = nameToId.get(key)!;
-        const deficit = needed - currentStock;
-        const addQuantity = Math.ceil(deficit / ing.weight_per_quantity_grams);
-        const existing = existingIngredients.find(e => e.id === existingId)!;
-        await apiFetch(`/api/ingredients/${existingId}`, {
-          method: 'PUT',
-          body: JSON.stringify({ quantity: existing.quantity + addQuantity }),
-        });
-        toppedUp++;
-        console.log(`  ↑ Topped up "${ing.name}" by ${addQuantity} ${ing.unit} (stock was ${currentStock}g, needed ${needed}g)`);
-      } else {
-        reused++;
-        console.log(`  ✓ Reused "${ing.name}" (stock ${currentStock}g, need ${needed}g)`);
-      }
+      reused++;
+      console.log(`  ✓ Reused "${ing.name}"`);
     } else {
-      // Compute quantity that covers the needed grams
-      const minQuantity = needed > 0
-        ? Math.ceil(needed / ing.weight_per_quantity_grams)
-        : ing.quantity;
-      const quantity = Math.max(ing.quantity, minQuantity);
-
       const result = await apiFetch<ApiIngredient>('/api/ingredients', {
         method: 'POST',
         body: JSON.stringify({
           name: ing.name,
-          quantity,
+          quantity: 0,
           price: ing.price,
           weightPerQuantityGrams: ing.weight_per_quantity_grams,
         }),
       });
       nameToId.set(key, result.id);
       created++;
-      console.log(`  + Created "${ing.name}" (${quantity} ${ing.unit})`);
+      console.log(`  + Created "${ing.name}" (0 stock — fill in actual amount bought)`);
     }
   }
 
@@ -186,7 +153,7 @@ async function main() {
     const ingredients = meal.ingredients.map(mi => {
       const id = nameToId.get(mi.name.toLowerCase());
       if (!id) throw new Error(`No id found for ingredient "${mi.name}" — not in upload payload`);
-      return { ingredientId: id, quantity: mi.grams };
+      return { ingredientId: id, quantity: 0 };
     });
 
     try {
@@ -247,7 +214,6 @@ async function main() {
 Summary:
   Ingredients created: ${created}
   Ingredients reused:  ${reused}
-  Ingredients topped up: ${toppedUp}
   Meals created:       ${mealsCreated}
   Meals failed:        ${mealFailures.length}${weekStart ? `\n  Plan created:        ${planCreated ? 'yes' : 'no'}` : ''}
 `);

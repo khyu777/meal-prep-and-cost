@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 const mealIngredientSchema = z.object({
   ingredientId: z.number().int().positive(),
-  quantity: z.number().positive(),
+  quantity: z.number().nonnegative(),
 });
 
 const uniqueIngredients = (items: { ingredientId: number }[]) =>
