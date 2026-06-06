@@ -338,11 +338,30 @@ AskUserQuestion({
 ```
 
 **If "Yes":**
-1. Run: `curl -s http://localhost:3002/health`
+1. Ask which week this plan is for:
+```
+AskUserQuestion({
+  "questions": [
+    {
+      "question": "Which week should these meals be planned for?",
+      "header": "Plan week",
+      "multiSelect": false,
+      "options": [
+        { "label": "This week", "description": "Week starting this Sunday" },
+        { "label": "Next week", "description": "Week starting next Sunday" },
+        { "label": "Custom date", "description": "Enter a specific Sunday (YYYY-MM-DD)" }
+      ]
+    }
+  ]
+})
+```
+Compute `weekStart` as `YYYY-MM-DD`: "This week" → most recent Sunday on or before today; "Next week" → 7 days after; "Custom date" → ask via follow-up prompt.
+
+2. Run: `curl -s http://localhost:3002/health`
    - If that fails, tell the user: "The backend isn't running. Start it with `npm run dev` in the `backend/` folder, then run `/meal-uploader` to upload."
    - Do not proceed further.
-2. Run: `cd backend && npm run import-plan -- ../meal-plan/tracker-upload-YYYY-MM-DD.json`
-3. Report the summary line printed by the importer (ingredients created/reused, meals created/failed).
+3. Run: `cd backend && npm run import-plan -- ../meal-plan/tracker-upload-YYYY-MM-DD.json --week <weekStart>`
+4. Report the summary line printed by the importer (ingredients created/reused, meals created/failed, plan created).
 
 **If "No":**
 > Note: Run `/meal-uploader` any time to upload `meal-plan/tracker-upload-YYYY-MM-DD.json` to the tracker.

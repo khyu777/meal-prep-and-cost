@@ -36,7 +36,35 @@ AskUserQuestion({
 
 ---
 
-## Step 2 — Health check
+## Step 2 — Choose week
+
+Ask the user which week this plan is for:
+
+```
+AskUserQuestion({
+  "questions": [
+    {
+      "question": "Which week should these meals be planned for?",
+      "header": "Plan week",
+      "multiSelect": false,
+      "options": [
+        { "label": "This week", "description": "Week starting this Sunday" },
+        { "label": "Next week", "description": "Week starting next Sunday" },
+        { "label": "Custom date", "description": "Enter a specific Sunday (YYYY-MM-DD)" }
+      ]
+    }
+  ]
+})
+```
+
+Compute `weekStart` as a `YYYY-MM-DD` string:
+- "This week" → the most recent Sunday on or before today
+- "Next week" → 7 days after "this week" Sunday
+- "Custom date" → ask for the date via a follow-up free-text prompt
+
+---
+
+## Step 3 — Health check
 
 Run: `curl -s http://localhost:3002/health`
 
@@ -46,12 +74,22 @@ If that fails:
 
 ---
 
-## Step 3 — Run importer
+## Step 4 — Health check
+
+Run: `curl -s http://localhost:3002/health`
+
+If that fails:
+> "The backend isn't running. Start it first: `cd backend && npm run dev`"
+> Exit.
+
+---
+
+## Step 5 — Run importer
 
 ```
-cd backend && npm run import-plan -- ../meal-plan/<chosen-file>
+cd backend && npm run import-plan -- ../meal-plan/<chosen-file> --week <weekStart>
 ```
 
-Report the summary printed by the importer (ingredients created/reused/topped-up, meals created/failed).
+Report the summary printed by the importer (ingredients created/reused/topped-up, meals created/failed, plan created).
 
 If any meals failed, surface the individual error messages from the importer output.

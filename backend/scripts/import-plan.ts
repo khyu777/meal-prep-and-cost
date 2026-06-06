@@ -68,9 +68,25 @@ function findNewestUploadFile(): string | null {
   return files.length ? path.join(mealPlanDir, files[0]) : null;
 }
 
+function parseArgs(): { filePath: string | undefined; weekStart: string | undefined } {
+  const args = process.argv.slice(2);
+  let filePath: string | undefined;
+  let weekStart: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--week' && args[i + 1]) {
+      weekStart = args[++i];
+    } else if (!args[i].startsWith('--')) {
+      filePath = args[i];
+    }
+  }
+  return { filePath, weekStart };
+}
+
 async function main() {
+  const { filePath: argPath, weekStart } = parseArgs();
+
   // Resolve input file
-  let inputPath = process.argv[2];
+  let inputPath = argPath;
   if (!inputPath) {
     const found = findNewestUploadFile();
     if (!found) {
@@ -163,6 +179,7 @@ async function main() {
 
   // Create meals
   let mealsCreated = 0;
+  const createdMealIds: number[] = [];
   const mealFailures: { name: string; error: string }[] = [];
 
   for (const meal of upload.meals) {
@@ -173,7 +190,7 @@ async function main() {
     });
 
     try {
-      await apiFetch('/api/meals', {
+      const createdMeal = await apiFetch<{ id: number }>('/api/meals', {
         method: 'POST',
         body: JSON.stringify({
           name: meal.name,
@@ -182,6 +199,7 @@ async function main() {
           ingredients,
         }),
       });
+      createdMealIds.push(createdMeal.id);
       mealsCreated++;
       console.log(`  + Created meal "${meal.name}"`);
     } catch (err) {
@@ -191,13 +209,46 @@ async function main() {
     }
   }
 
+  // Create a MealPlan for the specified week if --week was given
+  let planCreated = false;
+  if (weekStart && mealsCreated > 0) {
+    const start = new Date(`${weekStart}T00:00:00.000Z`);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 6);
+
+    // Distribute created meal IDs round-robin across days 0–6
+    const planMealIds = createdMealIds;
+    const items = planMealIds.map((mealId, idx) => ({
+      mealId,
+      dayOfWeek: idx % 7,
+      servings: upload.meals[idx]?.servings ?? 1,
+    }));
+
+    try {
+      await apiFetch('/api/plans', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `Week of ${weekStart}`,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          items,
+        }),
+      });
+      planCreated = true;
+      console.log(`  + Created plan "Week of ${weekStart}"`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`  ✗ Failed to create plan: ${msg}`);
+    }
+  }
+
   console.log(`
 Summary:
   Ingredients created: ${created}
   Ingredients reused:  ${reused}
   Ingredients topped up: ${toppedUp}
   Meals created:       ${mealsCreated}
-  Meals failed:        ${mealFailures.length}
+  Meals failed:        ${mealFailures.length}${weekStart ? `\n  Plan created:        ${planCreated ? 'yes' : 'no'}` : ''}
 `);
 
   if (mealFailures.length > 0) {
