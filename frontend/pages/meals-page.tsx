@@ -86,6 +86,7 @@ export default function MealsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [expandedMealIds, setExpandedMealIds] = useState<number[]>([]);
 
   if (mealsLoading || ingredientsLoading || plansLoading) return <LoadingSpinner />;
@@ -268,11 +269,25 @@ export default function MealsPage() {
     }
   }
 
+  async function handleDeleteAll() {
+    setDeleteAllConfirm(false);
+    for (const meal of visibleMeals) {
+      await remove(meal.id);
+    }
+    setExpandedMealIds([]);
+    await refreshIngredients();
+  }
+
   return (
     <div>
       <div className={styles.headerRow}>
         <h1 className={styles.title}>Meals</h1>
         <div className={styles.headerActions}>
+          {visibleMeals.length > 0 && (
+            <button className={styles.deleteAllBtn} onClick={() => setDeleteAllConfirm(true)}>
+              Delete All
+            </button>
+          )}
           <button
             className={styles.secondaryBtn}
             onClick={() => {
@@ -559,6 +574,13 @@ export default function MealsPage() {
           message="Are you sure you want to delete this meal?"
           onConfirm={() => handleDelete(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {deleteAllConfirm && (
+        <ConfirmDialog
+          message={`Delete all ${visibleMeals.length} meals for this week? This cannot be undone.`}
+          onConfirm={handleDeleteAll}
+          onCancel={() => setDeleteAllConfirm(false)}
         />
       )}
     </div>

@@ -93,6 +93,7 @@ export default function IngredientsPage() {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const addPricePer100g = pricePer100gPreview(addForm);
 
   async function handleAdd(e: React.FormEvent) {
@@ -165,11 +166,25 @@ export default function IngredientsPage() {
     }
   }
 
+  async function handleDeleteAll() {
+    setDeleteAllConfirm(false);
+    for (const ingredient of displayedItems) {
+      await remove(ingredient.id);
+    }
+  }
+
   if (loading || mealsLoading || plansLoading) return <LoadingSpinner />;
 
   return (
     <div>
-      <h1 className={styles.title}>Ingredients</h1>
+      <div className={styles.headerRow}>
+        <h1 className={styles.title}>Ingredients</h1>
+        {displayedItems.length > 0 && (
+          <button className={styles.deleteAllBtn} onClick={() => setDeleteAllConfirm(true)}>
+            Delete All
+          </button>
+        )}
+      </div>
       {error && <ErrorMessage message={error} />}
 
       <section className={styles.addSection}>
@@ -345,6 +360,13 @@ export default function IngredientsPage() {
           message="Are you sure you want to delete this ingredient?"
           onConfirm={() => handleDelete(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {deleteAllConfirm && (
+        <ConfirmDialog
+          message={`Delete all ${displayedItems.length} ingredients for this week? This cannot be undone.`}
+          onConfirm={handleDeleteAll}
+          onCancel={() => setDeleteAllConfirm(false)}
         />
       )}
     </div>

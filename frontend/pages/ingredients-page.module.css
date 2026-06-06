@@ -1,8 +1,29 @@
 /* Styles for the IngredientsPage */
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
 .title {
   font-size: 1.75rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0;
+}
+
+.deleteAllBtn {
+  padding: 0.4rem 0.9rem;
+  background: #fdecea;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.deleteAllBtn:hover {
+  background: #ffcdd2;
 }
 
 .sectionTitle {

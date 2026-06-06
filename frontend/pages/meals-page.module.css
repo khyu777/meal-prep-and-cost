@@ -17,6 +17,20 @@
   gap: 0.75rem;
 }
 
+.deleteAllBtn {
+  padding: 0.4rem 0.9rem;
+  background: #fdecea;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.deleteAllBtn:hover {
+  background: #ffcdd2;
+}
+
 .sectionTitle {
   font-size: 1.1rem;
   font-weight: 600;

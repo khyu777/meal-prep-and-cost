@@ -126,8 +126,19 @@ async function main() {
     const key = ing.name.toLowerCase();
 
     if (nameToId.has(key)) {
+      const id = nameToId.get(key)!;
+      const existing = existingIngredients.find(i => i.id === id)!;
+      await apiFetch<ApiIngredient>(`/api/ingredients/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: existing.name,
+          quantity: 0,
+          price: existing.price,
+          weightPerQuantityGrams: existing.weightPerQuantityGrams,
+        }),
+      });
       reused++;
-      console.log(`  ✓ Reused "${ing.name}"`);
+      console.log(`  ✓ Reused "${ing.name}" (reset to 0 stock)`);
     } else {
       const result = await apiFetch<ApiIngredient>('/api/ingredients', {
         method: 'POST',
