@@ -6,15 +6,36 @@ is passed explicitly on each call.
 
 ---
 
+## Step 0 — Parse Args
+
+Before asking anything, parse `$ARGUMENTS` (the text after `/meal-planner`) and
+pre-populate the session state. Recognized signals:
+
+| Signal in args | Field set |
+|---|---|
+| `meal prep` / `batch cook` / `prep` | `meal_prep: true` |
+| `N days` / `N-day` | `days: N` |
+| `under $N` / `$N budget` / `$N` | `budget_ceiling: N` |
+| `N meat(s)` / `two meats` / `chicken and beef` etc. | note in `theme` |
+| any cuisine / diet keyword | `theme` or `dietary_preferences` |
+
+Set each matched field in session state. **Skip the corresponding question in
+Step 1 for any field already set.** If args are empty or ambiguous, ask all
+questions as normal.
+
+---
+
 ## Step 1 — Collect Context
 
-Use `AskUserQuestion` to collect all fields upfront in a single prompt.
-All fields optional — apply defaults if blank.
+Use `AskUserQuestion` to collect only the fields NOT already set from args.
+All fields optional — apply defaults if blank. Omit any question whose field
+was populated in Step 0.
 
 ```
 AskUserQuestion({
   "title": "Let's plan your week",
   "questions": [
+    // include only unset fields from this list:
     {
       "id": "days",
       "label": "How many days to plan?",
@@ -56,6 +77,9 @@ AskUserQuestion({
 })
 ```
 
+If ALL fields were set from args, skip `AskUserQuestion` entirely and proceed
+to Step 2.
+
 Do not ask these conversationally. Fire once and wait.
 
 ---
@@ -76,6 +100,14 @@ Call `meal-brainstormer` via Task tool.
   "slot_to_fill": null
 }
 ```
+
+**When `meal_prep` is `true`**, add this requirement explicitly to the
+brainstormer prompt:
+
+> All cooking happens in ONE batch session (e.g., Sunday). Every meal must be
+> assembly or reheating only — zero active stovetop or oven cooking mid-week.
+> Structure meals around a small set of batch-cooked base components
+> (proteins, grains, roasted veg, sauces) that combine differently each day.
 
 Store the full plan (with descriptions) in session state.
 Display as meal cards:
