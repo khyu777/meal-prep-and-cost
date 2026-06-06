@@ -99,7 +99,8 @@ export default function MealsPage() {
   const visibleMealIds = Array.from(new Set([...assignedMealIds, ...selectedMealIds]));
   const visibleMeals = visibleMealIds
     .map((id) => meals.find((meal) => meal.id === id))
-    .filter((meal): meal is MealWithCost => Boolean(meal));
+    .filter((meal): meal is MealWithCost => Boolean(meal))
+    .sort((a, b) => b.cost / b.servings - a.cost / a.servings);
   const availableExistingMeals = meals.filter((meal) => !visibleMealIds.includes(meal.id));
 
   function selectableIngredients(currentIngredientId: string, usedIds: Set<string>) {
@@ -216,8 +217,8 @@ export default function MealsPage() {
       quantity: toGrams(parseFloat(row.quantity), row.quantityUnit),
     }));
 
-    if (parsedIngredients.some((r) => isNaN(r.quantity) || r.quantity <= 0)) {
-      setFormError('All ingredient amounts must be positive numbers.');
+    if (parsedIngredients.some((r) => isNaN(r.quantity) || r.quantity < 0)) {
+      setFormError('All ingredient amounts must be non-negative numbers.');
       return;
     }
 

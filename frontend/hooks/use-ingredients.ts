@@ -59,7 +59,7 @@ export function useIngredients(): UseIngredients {
     fetchAll();
   }, [fetchAll]);
 
-  const refresh = useCallback(() => fetchAll(), [fetchAll]);
+  const refresh = useCallback(async () => { _cache = null; await fetchAll(); }, [fetchAll]);
 
   const create = useCallback(async (body: CreateIngredientBody) => {
     setMutating(true);
