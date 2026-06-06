@@ -58,23 +58,13 @@ AskUserQuestion({
 ```
 
 Compute `weekStart` as a `YYYY-MM-DD` string:
-- "This week" → the most recent Sunday on or before today
+- "This week" → if today is Sunday, use today; otherwise use the next Sunday
 - "Next week" → 7 days after "this week" Sunday
 - "Custom date" → ask for the date via a follow-up free-text prompt
 
 ---
 
 ## Step 3 — Health check
-
-Run: `curl -s http://localhost:3002/health`
-
-If that fails:
-> "The backend isn't running. Start it first: `cd backend && npm run dev`"
-> Exit.
-
----
-
-## Step 4 — Health check
 
 Run: `curl -s http://localhost:3002/health`
 

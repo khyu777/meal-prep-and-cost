@@ -133,8 +133,8 @@ async function main() {
         body: JSON.stringify({
           name: existing.name,
           quantity: 0,
-          price: existing.price,
-          weightPerQuantityGrams: existing.weightPerQuantityGrams,
+          price: 0,
+          weightPerQuantityGrams: 0,
         }),
       });
       reused++;
@@ -145,8 +145,8 @@ async function main() {
         body: JSON.stringify({
           name: ing.name,
           quantity: 0,
-          price: ing.price,
-          weightPerQuantityGrams: ing.weight_per_quantity_grams,
+          price: 0,
+          weightPerQuantityGrams: 0,
         }),
       });
       nameToId.set(key, result.id);
