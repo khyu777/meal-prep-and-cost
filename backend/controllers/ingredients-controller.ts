@@ -9,7 +9,7 @@ export const createIngredientSchema = z.object({
   name: z.string().min(1).max(255),
   quantity: z.number().nonnegative(),
   price: z.number().nonnegative(),
-  weightPerQuantityGrams: z.number().nonnegative(),
+  weightPerQuantityGrams: z.number().positive(),
 }).strict();
 
 export const updateIngredientSchema = createIngredientSchema.partial().refine(

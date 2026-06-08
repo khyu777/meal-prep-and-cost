@@ -36,6 +36,7 @@ model MealIngredient {
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   ingredientId Int
   quantity     Decimal
+  targetGrams  Decimal    @default(0)
 
   @@id([mealId, ingredientId])
   @@index([mealId])

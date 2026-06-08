@@ -164,7 +164,7 @@ async function main() {
     const ingredients = meal.ingredients.map(mi => {
       const id = nameToId.get(mi.name.toLowerCase());
       if (!id) throw new Error(`No id found for ingredient "${mi.name}" — not in upload payload`);
-      return { ingredientId: id, quantity: 0 };
+      return { ingredientId: id, quantity: 0, targetGrams: mi.grams };
     });
 
     try {

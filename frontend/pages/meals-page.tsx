@@ -72,7 +72,7 @@ function pricePer100g(ingredient: MealWithCost['ingredients'][number]['ingredien
 }
 
 export default function MealsPage() {
-  const { items: meals, loading: mealsLoading, error: mealsError, create, update, remove } = useMeals();
+  const { items: meals, loading: mealsLoading, mutating: mealsMutating, error: mealsError, create, update, remove, autoPortion } = useMeals();
   const { items: ingredients, loading: ingredientsLoading, refresh: refreshIngredients } = useIngredients();
   const { items: plans, loading: plansLoading } = usePlans();
   const { weekStart, weekEnd } = useWeek();
@@ -279,6 +279,16 @@ export default function MealsPage() {
     await refreshIngredients();
   }
 
+  async function handleAutoPortion() {
+    if (visibleMealIds.length === 0) return;
+    try {
+      await autoPortion(visibleMealIds);
+      await refreshIngredients();
+    } catch {
+      // error surfaced via mealsError from hook
+    }
+  }
+
   return (
     <div>
       <div className={styles.headerRow}>
@@ -300,6 +310,16 @@ export default function MealsPage() {
           >
             Add Existing Meal
           </button>
+          {visibleMeals.length > 0 && (
+            <button
+              className={styles.secondaryBtn}
+              onClick={handleAutoPortion}
+              disabled={mealsMutating}
+              title="Distribute each ingredient's full purchased stock across these meals, proportional to planned amounts"
+            >
+              Auto-portion from stock
+            </button>
+          )}
           <button className={styles.newBtn} onClick={openCreate}>+ New Meal</button>
         </div>
       </div>

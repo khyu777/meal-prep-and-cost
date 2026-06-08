@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma-client';
 import { computeMealCost } from '../utils/cost-calculator';
 import { serializeIngredient } from '../utils/ingredient-serializer';
-import { createMealSchema, updateMealSchema } from '../models/meal-schemas';
+import { createMealSchema, updateMealSchema, autoPortionSchema } from '../models/meal-schemas';
 
 // Shared include clause for meals with ingredients and their purchase data
 const mealInclude = {
@@ -111,6 +111,7 @@ export async function createMeal(
             create: ingredients.map((mi) => ({
               ingredientId: mi.ingredientId,
               quantity: mi.quantity,
+              targetGrams: mi.targetGrams ?? mi.quantity,
             })),
           },
         },
@@ -174,6 +175,7 @@ export async function updateMeal(
             mealId: id,
             ingredientId: mi.ingredientId,
             quantity: mi.quantity,
+            targetGrams: mi.targetGrams ?? mi.quantity,
           })),
         });
       }
@@ -216,6 +218,79 @@ export async function deleteMeal(
       await tx.meal.delete({ where: { id } });
     });
     res.json({ data: { id }, error: null, status: 200 });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function autoPortion(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { mealIds } = req.body as { mealIds: number[] };
+
+    const updatedMeals = await prisma.$transaction(async (tx) => {
+      // Load all MealIngredient rows for the target meals + full ingredient data
+      const rows = await tx.mealIngredient.findMany({
+        where: { mealId: { in: mealIds } },
+        include: { ingredient: true },
+      });
+
+      // Group by ingredientId to process each purchased ingredient once
+      const byIngredient = new Map<number, typeof rows>();
+      for (const row of rows) {
+        const arr = byIngredient.get(row.ingredientId) ?? [];
+        arr.push(row);
+        byIngredient.set(row.ingredientId, arr);
+      }
+
+      for (const [ingredientId, miRows] of byIngredient) {
+        const ing = miRows[0].ingredient;
+        const purchased = Number(ing.quantity) * Number(ing.weightPerQuantityGrams);
+        if (purchased <= 0) continue;
+
+        // How many grams are committed to meals *outside* the target set
+        const otherRows = await tx.mealIngredient.findMany({
+          where: { ingredientId, mealId: { notIn: mealIds } },
+        });
+        const otherConsumed = otherRows.reduce((s, r) => s + Number(r.quantity), 0);
+        const available = Math.max(0, purchased - otherConsumed);
+        if (available <= 0) continue;
+
+        const totalTarget = miRows.reduce((s, r) => s + Number(r.targetGrams), 0);
+        if (totalTarget <= 0) continue;
+
+        // Distribute proportionally, integer grams
+        const newQtys: { mealId: number; qty: number }[] = miRows.map((r) => ({
+          mealId: r.mealId,
+          qty: Math.round(available * (Number(r.targetGrams) / totalTarget)),
+        }));
+
+        // Update each MealIngredient with its new quantity
+        for (const { mealId, qty } of newQtys) {
+          await tx.mealIngredient.update({
+            where: { mealId_ingredientId: { mealId, ingredientId } },
+            data: { quantity: qty },
+          });
+        }
+
+        // Recalculate stock: purchased − other meals − newly allocated
+        const allocated = newQtys.reduce((s, r) => s + r.qty, 0);
+        await tx.ingredient.update({
+          where: { id: ingredientId },
+          data: { stockWeightGrams: Math.max(0, purchased - otherConsumed - allocated) },
+        });
+      }
+
+      return tx.meal.findMany({
+        where: { id: { in: mealIds } },
+        include: mealInclude,
+      });
+    });
+
+    res.json({ data: updatedMeals.map(attachCost), error: null, status: 200 });
   } catch (err) {
     next(err);
   }

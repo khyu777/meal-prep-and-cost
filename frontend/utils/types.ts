@@ -15,6 +15,7 @@ export interface MealIngredient {
   mealId: number;
   ingredientId: number;
   quantity: number;
+  targetGrams: number;
   ingredient: Ingredient;
 }
 

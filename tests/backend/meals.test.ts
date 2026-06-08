@@ -13,7 +13,7 @@ jest.mock('../../backend/models/prisma-client', () => {
     update: jest.fn(),
     delete: jest.fn(),
   };
-  const mealIngredient = { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn() };
+  const mealIngredient = { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn(), update: jest.fn() };
   const ingredient = { findUnique: jest.fn(), update: jest.fn() };
   return {
     __esModule: true,
@@ -55,6 +55,7 @@ const sampleMealIngredient = {
   mealId: 1,
   ingredientId: 1,
   quantity: 250,
+  targetGrams: 250,
   ingredient: sampleIngredient,
 };
 
@@ -265,6 +266,47 @@ describe('Meals API', () => {
       const res = await request(buildApp()).delete('/api/meals/999');
 
       expect(res.status).toBe(404);
+      expect(res.body.data).toBeNull();
+    });
+  });
+
+  describe('POST /api/meals/auto-portion', () => {
+    it('distributes purchased stock across meals proportional to targetGrams', async () => {
+      // Two meals each using the same ingredient with targetGrams 250 and 750
+      const mi1 = { ...sampleMealIngredient, mealId: 1, targetGrams: 250 };
+      const mi2 = { ...sampleMealIngredient, mealId: 2, targetGrams: 750 };
+
+      (mockPrisma.mealIngredient.findMany as jest.Mock)
+        .mockResolvedValueOnce([mi1, mi2])   // target meals
+        .mockResolvedValueOnce([]);           // other meals for this ingredient
+
+      (mockPrisma.mealIngredient.update as jest.Mock).mockResolvedValue({});
+      (mockPrisma.meal.findMany as jest.Mock).mockResolvedValue([
+        { ...sampleMeal, id: 1, ingredients: [{ ...mi1, quantity: 250 }] },
+        { ...sampleMeal, id: 2, ingredients: [{ ...mi2, quantity: 750 }] },
+      ]);
+
+      const res = await request(buildApp())
+        .post('/api/meals/auto-portion')
+        .send({ mealIds: [1, 2] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ error: null, status: 200 });
+      // Purchased: 2 units × 500 g/unit = 1000g. meal 1 gets 250g (25%), meal 2 gets 750g (75%)
+      expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { quantity: 250 } })
+      );
+      expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { quantity: 750 } })
+      );
+    });
+
+    it('returns 400 when mealIds is empty', async () => {
+      const res = await request(buildApp())
+        .post('/api/meals/auto-portion')
+        .send({ mealIds: [] });
+
+      expect(res.status).toBe(400);
       expect(res.body.data).toBeNull();
     });
   });

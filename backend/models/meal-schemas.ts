@@ -5,6 +5,7 @@ import { z } from 'zod';
 const mealIngredientSchema = z.object({
   ingredientId: z.number().int().positive(),
   quantity: z.number().nonnegative(),
+  targetGrams: z.number().nonnegative().optional(),
 });
 
 const uniqueIngredients = (items: { ingredientId: number }[]) =>
@@ -19,6 +20,10 @@ export const createMealSchema = z.object({
     .min(1)
     .max(50)
     .refine(uniqueIngredients, { message: 'Each ingredient can only appear once' }),
+});
+
+export const autoPortionSchema = z.object({
+  mealIds: z.array(z.number().int().positive()).min(1),
 });
 
 export const updateMealSchema = z.object({

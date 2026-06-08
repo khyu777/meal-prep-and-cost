@@ -33,6 +33,7 @@ interface UseMeals {
   create: (body: CreateMealBody) => Promise<MealWithCost>;
   update: (id: number, body: UpdateMealBody) => Promise<void>;
   remove: (id: number) => Promise<void>;
+  autoPortion: (mealIds: number[]) => Promise<MealWithCost[]>;
 }
 
 export function useMeals(): UseMeals {
@@ -109,5 +110,24 @@ export function useMeals(): UseMeals {
     }
   }, []);
 
-  return { items, loading, mutating, error, create, update, remove };
+  const autoPortion = useCallback(async (mealIds: number[]) => {
+    setMutating(true);
+    setError(null);
+    try {
+      const updated = await apiPost<MealWithCost[]>('/api/meals/auto-portion', { mealIds });
+      _cache = null;
+      setItems((current) => {
+        const map = new Map(updated.map((m) => [m.id, m]));
+        return current.map((m) => map.get(m.id) ?? m);
+      });
+      return updated;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to auto-portion meals');
+      throw err;
+    } finally {
+      setMutating(false);
+    }
+  }, []);
+
+  return { items, loading, mutating, error, create, update, remove, autoPortion };
 }
