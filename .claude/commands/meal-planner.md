@@ -17,6 +17,7 @@ pre-populate the session state. Recognized signals:
 | `N days` / `N-day` | `days: N` |
 | `under $N` / `$N budget` / `$N` | `budget_ceiling: N` |
 | `N meat(s)` / `two meats` / `chicken and beef` etc. | note in `theme` |
+| `in <place>` / city or metro name (e.g. `in Seattle`, `NYC`) | `location` |
 | any cuisine / diet keyword | `theme` or `dietary_preferences` |
 
 Set each matched field in session state. **Skip the corresponding question in
@@ -59,6 +60,12 @@ AskUserQuestion({
       "label": "Dietary preferences (optional)",
       "type": "text",
       "placeholder": "e.g. vegetarian, no shellfish, gluten-free"
+    },
+    {
+      "id": "location",
+      "label": "Shopping location for prices (optional)",
+      "type": "text",
+      "placeholder": "e.g. Seattle, NYC, Austin — leave blank for US average"
     },
     {
       "id": "meal_prep",
@@ -194,9 +201,12 @@ Call `meal-analyzer` via Task tool (grocery list + prices + nutrition in one cal
     { "name": "Lemon Herb Chicken", "description": "Chicken thighs lemon garlic herbs" }
   ],
   "budget_ceiling": 150,
-  "meal_prep": true
+  "meal_prep": true,
+  "location": "Seattle"
 }
 ```
+
+Pass `location` from session state (null if unset → analyzer uses US average).
 
 Hold returned JSON in memory as `output_json`. Do not write to file yet.
 
@@ -238,7 +248,7 @@ This is the portable import file — keep the `tracker_upload` wrapper key so th
 [If budget_ceiling set and over:]
 ⚠️ Over budget ($150.00 ceiling) — consider swapping high-cost meals
 
-*Prices are US average estimates and may vary by region and store.*
+*Prices are estimates for {location, or "US average" if unset} and may vary by store.*
 *Nutrition estimates are approximate and based on standard USDA values.*
 
 ---
@@ -282,7 +292,7 @@ Gram amounts come from `output_json.tracker_upload.meals[i].ingredients[].grams`
 - [ ] Olive oil — check stock — ~$0.20/tbsp
 </details>
 
-*Prices are US average estimates and may vary by region and store.*
+*Prices are estimates for {location, or "US average" if unset} and may vary by store.*
 ```
 
 Once written, proceed to Step 7 before notifying the user.
@@ -347,6 +357,7 @@ Compute `weekStart` as `YYYY-MM-DD`: "This week" → most recent Sunday on or be
 {
   "days": 5,
   "budget_ceiling": null,
+  "location": null,
   "dietary_preferences": [],
   "locked_meals": [],
   "excluded_meals": [],

@@ -45,11 +45,13 @@ If no `meal-plan/` files found:
     { "name": "Lemon Herb Chicken", "description": "Chicken thighs lemon garlic herbs" }
   ],
   "budget_ceiling": 150,
-  "meal_prep": true
+  "meal_prep": true,
+  "location": "Seattle"
 }
 ```
 
-`budget_ceiling` may be null.
+`budget_ceiling` may be null. `location` may be null or absent → use US average.
+When standalone (`/meal-analyzer`), there is no location input → use US average.
 
 ---
 
@@ -169,12 +171,18 @@ Return JSON only. No preamble, no markdown fences.
 ## Phase 2 — Price Estimation
 
 ### Price basis
-- US average grocery prices, generic (not store-specific)
+- Generic grocery prices, not store-specific
 - Per-usage cost, not per-package cost
   - 2 tbsp olive oil → cost of 2 tbsp, not a bottle
   - 1 cup dry rice → cost of 1 cup, not a 5lb bag
+- **Location:** when `location` is set (a city/metro), adjust the US-average
+  baseline below by that metro's typical cost-of-groceries multiplier (e.g.
+  NYC / SF / Seattle run high; much of the South/Midwest runs at or below
+  average). Apply one consistent multiplier across all categories — do not
+  invent precise per-item local prices. When `location` is null, use the
+  baseline as-is.
 
-### Unit price reference
+### Unit price reference (US average baseline)
 | Category | Examples |
 |---|---|
 | Produce | Onion $0.80/ea, garlic $0.50/head, lemon $0.60/ea, spinach $3.50/bag |
