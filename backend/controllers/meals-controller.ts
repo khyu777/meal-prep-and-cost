@@ -26,10 +26,42 @@ function attachCost(meal: MealWithIngredients) {
     ingredients: meal.ingredients.map((mealIngredient) => ({
       ...mealIngredient,
       quantity: Number(mealIngredient.quantity),
+      targetGrams: Number(mealIngredient.targetGrams),
       ingredient: serializeIngredient(mealIngredient.ingredient),
     })),
     cost,
   };
+}
+
+function allocateWholeGramsByTarget<T>(
+  rows: T[],
+  wholeGramPool: number,
+  targetFor: (row: T) => number
+): number[] {
+  const totalTarget = rows.reduce((sum, row) => sum + targetFor(row), 0);
+  if (totalTarget <= 0 || wholeGramPool <= 0) {
+    return rows.map(() => 0);
+  }
+
+  const allocations = rows.map((row, index) => {
+    const exact = wholeGramPool * (targetFor(row) / totalTarget);
+    const floor = Math.floor(exact);
+    return { index, floor, remainder: exact - floor };
+  });
+  let remaining = wholeGramPool - allocations.reduce((sum, row) => sum + row.floor, 0);
+
+  allocations
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index)
+    .forEach((row) => {
+      if (remaining > 0) {
+        row.floor += 1;
+        remaining--;
+      }
+    });
+
+  return allocations
+    .sort((a, b) => a.index - b.index)
+    .map((row) => row.floor);
 }
 
 export async function getAllMeals(
@@ -252,24 +284,21 @@ export async function autoPortion(
 
       for (const [ingredientId, miRows] of byIngredient) {
         const ing = miRows[0].ingredient;
-        const purchased = Number(ing.quantity) * Number(ing.weightPerQuantityGrams);
-        if (purchased <= 0) continue;
-
-        // How many grams are committed to meals *outside* the target set
-        const otherRows = await tx.mealIngredient.findMany({
-          where: { ingredientId, mealId: { notIn: mealIds } },
-        });
-        const otherConsumed = otherRows.reduce((s, r) => s + Number(r.quantity), 0);
-        const available = Math.max(0, purchased - otherConsumed);
-        if (available <= 0) continue;
+        const currentSelectedQuantity = miRows.reduce((sum, row) => sum + Number(row.quantity), 0);
+        const available = Math.max(0, Number(ing.stockWeightGrams) + currentSelectedQuantity);
+        const wholeGramPool = Math.floor(available);
 
         const totalTarget = miRows.reduce((s, r) => s + Number(r.targetGrams), 0);
         if (totalTarget <= 0) continue;
 
-        // Distribute proportionally, integer grams
-        const newQtys: { mealId: number; qty: number }[] = miRows.map((r) => ({
-          mealId: r.mealId,
-          qty: Math.round(available * (Number(r.targetGrams) / totalTarget)),
+        const allocations = allocateWholeGramsByTarget(
+          miRows,
+          wholeGramPool,
+          (row) => Number(row.targetGrams)
+        );
+        const newQtys: { mealId: number; qty: number }[] = miRows.map((row, index) => ({
+          mealId: row.mealId,
+          qty: allocations[index],
         }));
 
         // Update each MealIngredient with its new quantity
@@ -280,11 +309,10 @@ export async function autoPortion(
           });
         }
 
-        // Recalculate stock: purchased − other meals − newly allocated
         const allocated = newQtys.reduce((s, r) => s + r.qty, 0);
         await tx.ingredient.update({
           where: { id: ingredientId },
-          data: { stockWeightGrams: Math.max(0, purchased - otherConsumed - allocated) },
+          data: { stockWeightGrams: available - allocated },
         });
       }
 

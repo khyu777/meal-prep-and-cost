@@ -12,7 +12,9 @@ export const createIngredientSchema = z.object({
   weightPerQuantityGrams: z.number().nonnegative(),
 }).strict();
 
-export const updateIngredientSchema = createIngredientSchema.partial().refine(
+export const updateIngredientSchema = createIngredientSchema.partial().extend({
+  preserveStockOnZero: z.boolean().optional(),
+}).refine(
   (data) => Object.keys(data).length > 0,
   { message: 'At least one field must be provided' }
 );
@@ -60,7 +62,7 @@ export async function updateIngredient(
       res.status(400).json({ data: null, error: { message: 'Invalid id' }, status: 400 });
       return;
     }
-    const data = req.body as z.infer<typeof updateIngredientSchema>;
+    const { preserveStockOnZero, ...data } = req.body as z.infer<typeof updateIngredientSchema>;
     const weightFieldChanged =
       data.quantity !== undefined || data.weightPerQuantityGrams !== undefined;
     const updateData: typeof data & { stockWeightGrams?: number } = { ...data };
@@ -77,10 +79,10 @@ export async function updateIngredient(
         data.weightPerQuantityGrams ?? Number(current.weightPerQuantityGrams);
       const newTotalWeight = nextQuantity * nextWeightPerQuantityGrams;
       if (newTotalWeight === 0) {
-        // Purchase zeroed out (e.g. import reset) — nothing purchased, so no stock remains.
-        // Set directly to 0 rather than via delta, which would otherwise leave behind
-        // negative stock equal to grams already consumed by existing meals.
-        updateData.stockWeightGrams = 0;
+        if (!preserveStockOnZero) {
+          // Purchase zeroed out manually: nothing purchased, so no stock remains.
+          updateData.stockWeightGrams = 0;
+        }
       } else {
         // Preserve consumed grams — only adjust stock by the change in total weight
         updateData.stockWeightGrams = Number(current.stockWeightGrams) + (newTotalWeight - oldTotalWeight);

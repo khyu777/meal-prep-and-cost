@@ -21,6 +21,7 @@ import { useWeek } from '../../frontend/hooks/use-week';
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockRemove = vi.fn();
+const mockAutoPortion = vi.fn();
 const mockRefreshIngredients = vi.fn();
 
 const sampleIngredient = {
@@ -88,6 +89,7 @@ function setupMocks(mealOverrides = {}, ingredientOverrides = {}, planOverrides 
     create: mockCreate,
     update: mockUpdate,
     remove: mockRemove,
+    autoPortion: mockAutoPortion,
     ...mealOverrides,
   });
   (useIngredients as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -155,6 +157,18 @@ describe('MealsPage', () => {
 
     expect(screen.getByText('Grilled Chicken')).toBeInTheDocument();
     expect(screen.queryByText(/no meals selected/i)).not.toBeInTheDocument();
+  });
+
+  it('auto-portions visible week meals and refreshes ingredient stock', async () => {
+    mockAutoPortion.mockResolvedValue(sampleMeals);
+    mockRefreshIngredients.mockResolvedValue(undefined);
+    setupMocks({}, {}, { items: [samplePlan] });
+    render(<MealsPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /auto-portion from stock/i }));
+
+    expect(mockAutoPortion).toHaveBeenCalledWith([1]);
+    expect(mockRefreshIngredients).toHaveBeenCalledOnce();
   });
 
   it('expands a meal to show ingredients sorted by price per 100g descending', async () => {
@@ -343,7 +357,7 @@ describe('MealsPage', () => {
     render(<MealsPage />);
 
     await addSampleMealFromHistory();
-    await userEvent.click(screen.getByRole('button', { name: /delete/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
     await userEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
     expect(mockRemove).toHaveBeenCalledWith(1);
