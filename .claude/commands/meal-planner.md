@@ -28,66 +28,104 @@ questions as normal.
 
 ## Step 1 — Collect Context
 
-Use `AskUserQuestion` to collect only the fields NOT already set from args.
-All fields optional — apply defaults if blank. Omit any question whose field
-was populated in Step 0.
+Use two sequential `AskUserQuestion` calls to collect all fields NOT already
+set from args. All fields optional — apply defaults if blank. Omit any
+question whose field was populated in Step 0.
 
+**Round 1 — core fields** (skip any already set from args):
 ```
 AskUserQuestion({
-  "title": "Let's plan your week",
   "questions": [
-    // include only unset fields from this list:
     {
-      "id": "days",
-      "label": "How many days to plan?",
-      "type": "number",
-      "default": 5
+      "question": "How many days would you like to plan?",
+      "header": "Days",
+      "multiSelect": false,
+      "options": [
+        { "label": "5 days", "description": "Monday–Friday (default)" },
+        { "label": "7 days", "description": "Full week including weekend" },
+        { "label": "3 days", "description": "Short or partial week" }
+      ]
     },
     {
-      "id": "budget",
-      "label": "Weekly budget ceiling (optional)",
-      "type": "text",
-      "placeholder": "e.g. $150 — leave blank for no limit"
+      "question": "Meal prep mode — batch cook once, or cook fresh each meal?",
+      "header": "Meal prep",
+      "multiSelect": false,
+      "options": [
+        { "label": "Cook fresh each meal", "description": "No — cook at mealtime (default)" },
+        { "label": "Batch cook for the week", "description": "Yes — one big cook session, reheat mid-week" }
+      ]
     },
     {
-      "id": "theme",
-      "label": "Meal plan theme or cuisine (optional)",
-      "type": "text",
-      "placeholder": "e.g. Mediterranean, quick 30-min meals, high protein, comfort food"
+      "question": "Do you have a weekly budget ceiling?",
+      "header": "Budget",
+      "multiSelect": false,
+      "options": [
+        { "label": "No limit", "description": "No budget constraint (default)" },
+        { "label": "Under $75", "description": "Budget-friendly" },
+        { "label": "Under $100", "description": "Moderate" },
+        { "label": "Under $150", "description": "Generous" }
+      ]
     },
     {
-      "id": "dietary",
-      "label": "Dietary preferences (optional)",
-      "type": "text",
-      "placeholder": "e.g. vegetarian, no shellfish, gluten-free"
-    },
-    {
-      "id": "location",
-      "label": "Shopping location for prices (optional)",
-      "type": "text",
-      "placeholder": "e.g. Seattle, NYC, Austin — leave blank for US average"
-    },
-    {
-      "id": "meal_prep",
-      "label": "Meal prep mode?",
-      "type": "select",
-      "options": ["No — cook fresh each meal", "Yes — batch cook for the week"],
-      "default": "No — cook fresh each meal"
-    },
-    {
-      "id": "locked",
-      "label": "Any meals already locked in? (optional)",
-      "type": "text",
-      "placeholder": "e.g. Pasta night on Wednesday dinner"
+      "question": "Any dietary preferences or restrictions?",
+      "header": "Dietary",
+      "multiSelect": false,
+      "options": [
+        { "label": "None", "description": "No restrictions (default)" },
+        { "label": "Vegetarian", "description": "No meat" },
+        { "label": "Gluten-free", "description": "Avoid gluten" },
+        { "label": "No shellfish", "description": "Avoid shellfish only" }
+      ]
     }
   ]
 })
 ```
 
-If ALL fields were set from args, skip `AskUserQuestion` entirely and proceed
-to Step 2.
+**Round 2 — optional fields** (skip any already set from args; if all three
+were set from args, skip this round entirely):
+```
+AskUserQuestion({
+  "questions": [
+    {
+      "question": "Any meal plan theme or cuisine preference?",
+      "header": "Theme",
+      "multiSelect": false,
+      "options": [
+        { "label": "No preference", "description": "Varied, balanced meals (default)" },
+        { "label": "High protein", "description": "Fitness-focused, protein-dense" },
+        { "label": "Mediterranean", "description": "Fresh, healthy Mediterranean style" },
+        { "label": "Quick 30-min meals", "description": "Fast meals for busy weekdays" }
+      ]
+    },
+    {
+      "question": "Where are you shopping? (used to estimate local prices)",
+      "header": "Location",
+      "multiSelect": false,
+      "options": [
+        { "label": "US average", "description": "No specific location (default)" },
+        { "label": "NYC", "description": "New York City" },
+        { "label": "Seattle", "description": "Seattle / Pacific Northwest" },
+        { "label": "Other", "description": "Enter your city in the notes field" }
+      ]
+    },
+    {
+      "question": "Any meals already locked in for specific days?",
+      "header": "Locked meals",
+      "multiSelect": false,
+      "options": [
+        { "label": "None", "description": "No locked meals (default)" },
+        { "label": "Yes — I'll describe", "description": "Add a note below, e.g. 'Pasta night Wednesday dinner'" }
+      ]
+    }
+  ]
+})
+```
 
-Do not ask these conversationally. Fire once and wait.
+If ALL fields were set from args, skip both `AskUserQuestion` calls and
+proceed to Step 2.
+
+Do not ask these conversationally. Fire round 1, wait for response, then fire
+round 2.
 
 ---
 
