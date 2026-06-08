@@ -89,17 +89,19 @@ export async function createMeal(
           if (!ing) {
             throw Object.assign(new Error(`Ingredient ${mi.ingredientId} not found`), { statusCode: 400 });
           }
-        const available = Number(ing.stockWeightGrams);
-        if (available < mi.quantity) {
-          throw Object.assign(
-            new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity}g, have ${available}g`),
-            { statusCode: 422 }
-          );
+        if (mi.quantity > 0) {
+          const available = Number(ing.stockWeightGrams);
+          if (available < mi.quantity) {
+            throw Object.assign(
+              new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity}g, have ${available}g`),
+              { statusCode: 422 }
+            );
+          }
+          await tx.ingredient.update({
+            where: { id: mi.ingredientId },
+            data: { stockWeightGrams: { decrement: mi.quantity } },
+          });
         }
-        await tx.ingredient.update({
-          where: { id: mi.ingredientId },
-          data: { stockWeightGrams: { decrement: mi.quantity } },
-        });
       }
 
       return tx.meal.create({
@@ -156,17 +158,19 @@ export async function updateMeal(
           if (!ing) {
             throw Object.assign(new Error(`Ingredient ${mi.ingredientId} not found`), { statusCode: 400 });
           }
-          const available = Number(ing.stockWeightGrams);
-          if (available < mi.quantity) {
-            throw Object.assign(
-              new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity}g, have ${available}g`),
-              { statusCode: 422 }
-            );
+          if (mi.quantity > 0) {
+            const available = Number(ing.stockWeightGrams);
+            if (available < mi.quantity) {
+              throw Object.assign(
+                new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity}g, have ${available}g`),
+                { statusCode: 422 }
+              );
+            }
+            await tx.ingredient.update({
+              where: { id: mi.ingredientId },
+              data: { stockWeightGrams: { decrement: mi.quantity } },
+            });
           }
-          await tx.ingredient.update({
-            where: { id: mi.ingredientId },
-            data: { stockWeightGrams: { decrement: mi.quantity } },
-          });
         }
 
         await tx.mealIngredient.deleteMany({ where: { mealId: id } });

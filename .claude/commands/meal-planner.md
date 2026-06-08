@@ -246,6 +246,8 @@ Call `meal-analyzer` via Task tool (grocery list + prices + nutrition in one cal
 
 Pass `location` from session state (null if unset → analyzer uses US average).
 
+**Do NOT add a custom return schema to the prompt.** The analyzer has its own documented output format — overriding it will produce incomplete JSON (e.g., missing `tracker_upload.ingredients`). Just pass the input payload above and let the analyzer return its full format.
+
 Hold returned JSON in memory as `output_json`. Do not write to file yet.
 
 ---

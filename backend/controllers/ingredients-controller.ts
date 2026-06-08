@@ -9,7 +9,7 @@ export const createIngredientSchema = z.object({
   name: z.string().min(1).max(255),
   quantity: z.number().nonnegative(),
   price: z.number().nonnegative(),
-  weightPerQuantityGrams: z.number().positive(),
+  weightPerQuantityGrams: z.number().nonnegative(),
 }).strict();
 
 export const updateIngredientSchema = createIngredientSchema.partial().refine(
@@ -76,8 +76,15 @@ export async function updateIngredient(
       const nextWeightPerQuantityGrams =
         data.weightPerQuantityGrams ?? Number(current.weightPerQuantityGrams);
       const newTotalWeight = nextQuantity * nextWeightPerQuantityGrams;
-      // Preserve consumed grams — only adjust stock by the change in total weight
-      updateData.stockWeightGrams = Number(current.stockWeightGrams) + (newTotalWeight - oldTotalWeight);
+      if (newTotalWeight === 0) {
+        // Purchase zeroed out (e.g. import reset) — nothing purchased, so no stock remains.
+        // Set directly to 0 rather than via delta, which would otherwise leave behind
+        // negative stock equal to grams already consumed by existing meals.
+        updateData.stockWeightGrams = 0;
+      } else {
+        // Preserve consumed grams — only adjust stock by the change in total weight
+        updateData.stockWeightGrams = Number(current.stockWeightGrams) + (newTotalWeight - oldTotalWeight);
+      }
     }
 
     const ingredient = await prisma.ingredient.update({
