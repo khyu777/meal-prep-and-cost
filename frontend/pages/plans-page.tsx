@@ -136,8 +136,7 @@ export default function PlansPage() {
     }
   }
 
-  const weekPlan = plans[0] ?? null;
-  const showForm = !weekPlan || editingId !== null;
+  const showForm = plans.length === 0 || editingId !== null;
 
   async function refreshPrices(plan: PlanWithCost) {
     setRefreshing(true);
@@ -215,23 +214,23 @@ export default function PlansPage() {
         </section>
       )}
 
-      {weekPlan && editingId === null && (() => {
+      {plans.filter((plan) => plan.id !== editingId).map((plan) => {
         const byDay: PlanWithCost['items'][] = Array.from({ length: 7 }, () => []);
-        weekPlan.items.forEach((item) => byDay[item.dayOfWeek].push(item));
+        plan.items.forEach((item) => byDay[item.dayOfWeek].push(item));
         const dayCosts = byDay.map((items) =>
           items.reduce((sum, item) => sum + (Number(item.snapshotCostPerServing) || 0) * item.servings, 0)
         );
         return (
-          <div className={styles.planCard}>
+          <div key={plan.id} className={styles.planCard}>
             <div className={styles.planHeader}>
-              <h2 className={styles.planName}>{weekPlan.name}</h2>
+              <h2 className={styles.planName}>{plan.name}</h2>
               <div className={styles.planRight}>
-                <span className={styles.planCost}>{formatCurrency(weekPlan.cost)}</span>
+                <span className={styles.planCost}>{formatCurrency(plan.cost)}</span>
                 <div className={styles.planActions}>
-                  <button className={styles.refreshBtn} onClick={() => refreshPrices(weekPlan)} disabled={refreshing}>
+                  <button className={styles.refreshBtn} onClick={() => refreshPrices(plan)} disabled={refreshing}>
                     {refreshing ? 'Refreshing…' : 'Refresh Prices'}
                   </button>
-                  <button className={styles.editBtn} onClick={() => openEdit(weekPlan)}>Edit</button>
+                  <button className={styles.editBtn} onClick={() => openEdit(plan)}>Edit</button>
                 </div>
               </div>
             </div>
@@ -259,7 +258,7 @@ export default function PlansPage() {
             </div>
           </div>
         );
-      })()}
+      })}
 
     </div>
   );

@@ -29,8 +29,11 @@ app.get('/health', (_req, res) => {
 // Global error handler — must be last
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Only bind a port when run directly — tests import the app without starting a server
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 export default app;

@@ -10,20 +10,30 @@ export async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const res = await fetch(path, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
-    ...options,
   });
 
-  const json: ApiResponse<T> = await res.json();
+  let json: ApiResponse<T>;
+  try {
+    json = await res.json();
+  } catch {
+    // Non-JSON response (dead proxy, unknown route) — surface the HTTP status instead
+    throw new Error(`Request failed with status ${res.status}`);
+  }
 
   if (json.error !== null && json.error !== undefined) {
     const message = typeof json.error === 'string'
       ? json.error
       : json.error.message ?? 'Request failed';
     throw new Error(message);
+  }
+
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`);
   }
 
   return json.data;

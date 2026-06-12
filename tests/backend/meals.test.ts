@@ -14,16 +14,18 @@ jest.mock('../../backend/models/prisma-client', () => {
     delete: jest.fn(),
   };
   const mealIngredient = { findMany: jest.fn(), deleteMany: jest.fn(), createMany: jest.fn(), update: jest.fn() };
+  const mealPlanItem = { findMany: jest.fn() };
   const ingredient = { findUnique: jest.fn(), update: jest.fn() };
   return {
     __esModule: true,
     default: {
       meal,
       mealIngredient,
+      mealPlanItem,
       ingredient,
       // $transaction executes the callback with the same shared mock objects
       $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) =>
-        fn({ meal, mealIngredient, ingredient })
+        fn({ meal, mealIngredient, mealPlanItem, ingredient })
       ),
     },
   };
@@ -73,6 +75,7 @@ beforeEach(() => {
   (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(sampleIngredient);
   (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(sampleIngredient);
   (mockPrisma.mealIngredient.findMany as jest.Mock).mockResolvedValue([sampleMealIngredient]);
+  (mockPrisma.mealPlanItem.findMany as jest.Mock).mockResolvedValue([]);
 });
 
 describe('Meals API', () => {
@@ -218,6 +221,21 @@ describe('Meals API', () => {
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ error: null, status: 200 });
       expect(mockPrisma.mealIngredient.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 422 when shrinking servings below what a plan already schedules', async () => {
+      (mockPrisma.mealPlanItem.findMany as jest.Mock).mockResolvedValue([
+        { planId: 1, mealId: 1, dayOfWeek: 0, servings: 2 },
+        { planId: 1, mealId: 1, dayOfWeek: 3, servings: 2 },
+      ]);
+
+      const res = await request(buildApp())
+        .put('/api/meals/1')
+        .send({ servings: 3 });
+
+      expect(res.status).toBe(422);
+      expect(res.body.data).toBeNull();
+      expect(mockPrisma.meal.update).not.toHaveBeenCalled();
     });
 
     it('returns 404 when meal does not exist', async () => {

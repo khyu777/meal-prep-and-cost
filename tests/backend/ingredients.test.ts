@@ -6,18 +6,25 @@ import { errorHandler } from '../../backend/middleware/error-handler';
 import ingredientsRouter from '../../backend/routes/ingredients';
 
 // Mock the Prisma client before any imports resolve it
-jest.mock('../../backend/models/prisma-client', () => ({
-  __esModule: true,
-  default: {
-    ingredient: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+jest.mock('../../backend/models/prisma-client', () => {
+  const ingredient = {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: {
+      ingredient,
+      // $transaction executes the callback with the same shared mock objects
+      $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) =>
+        fn({ ingredient })
+      ),
     },
-  },
-}));
+  };
+});
 
 import prisma from '../../backend/models/prisma-client';
 
@@ -221,6 +228,34 @@ describe('Ingredients API', () => {
         where: { id: 1 },
         data: { quantity: 2, price: 12, weightPerQuantityGrams: 500, stockWeightGrams: 1125 },
       });
+    });
+
+    it('clamps stock at zero when shrinking a purchase below already-consumed grams', async () => {
+      // 1000g bought, only 100g left in stock (900g consumed by meals)
+      const current = { ...sampleIngredient, stockWeightGrams: 100 };
+      const updated = { ...current, quantity: 1, stockWeightGrams: 0 };
+      (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(current);
+      (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(updated);
+
+      const res = await request(buildApp())
+        .put('/api/ingredients/1')
+        .send({ quantity: 1 });
+
+      expect(res.status).toBe(200);
+      expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { quantity: 1, stockWeightGrams: 0 },
+      });
+    });
+
+    it('returns 400 when only preserveStockOnZero is provided', async () => {
+      const res = await request(buildApp())
+        .put('/api/ingredients/1')
+        .send({ preserveStockOnZero: true });
+
+      expect(res.status).toBe(400);
+      expect(res.body.data).toBeNull();
+      expect(mockPrisma.ingredient.update).not.toHaveBeenCalled();
     });
 
     it('returns 404 when ingredient does not exist', async () => {

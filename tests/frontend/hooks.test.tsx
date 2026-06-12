@@ -5,6 +5,7 @@ import { useIngredients } from '../../frontend/hooks/use-ingredients';
 import { useMeals } from '../../frontend/hooks/use-meals';
 import { usePlans } from '../../frontend/hooks/use-plans';
 import { apiGet, apiPut, apiDelete } from '../../frontend/utils/api';
+import { ingredientsCache, mealsCache, plansCache } from '../../frontend/utils/api-cache';
 
 vi.mock('../../frontend/utils/api', () => ({
   apiGet: vi.fn(),
@@ -47,6 +48,10 @@ const samplePlan = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Shared module-level caches must not leak data between tests
+  ingredientsCache.invalidate();
+  mealsCache.invalidate();
+  plansCache.invalidate();
 });
 
 describe('data hooks', () => {

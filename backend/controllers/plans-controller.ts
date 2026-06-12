@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma-client';
-import { computePlanCost, computeMealCost } from '../utils/cost-calculator';
+import { computeMealCost } from '../utils/cost-calculator';
 import { createPlanSchema, updatePlanSchema } from '../models/plan-schemas';
 import { planInclude } from '../models/plan-queries';
 

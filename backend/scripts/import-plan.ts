@@ -158,7 +158,8 @@ async function main() {
 
   // Create meals
   let mealsCreated = 0;
-  const createdMealIds: number[] = [];
+  // Track servings alongside each created id so plan items stay aligned even if some meals fail
+  const createdMeals: { id: number; servings: number }[] = [];
   const mealFailures: { name: string; error: string }[] = [];
 
   for (const meal of upload.meals) {
@@ -178,7 +179,7 @@ async function main() {
           ingredients,
         }),
       });
-      createdMealIds.push(createdMeal.id);
+      createdMeals.push({ id: createdMeal.id, servings: meal.servings });
       mealsCreated++;
       console.log(`  + Created meal "${meal.name}"`);
     } catch (err) {
@@ -196,12 +197,11 @@ async function main() {
     end.setDate(end.getDate() + 6);
     end.setHours(23, 59, 59, 999);
 
-    // Distribute created meal IDs round-robin across days 0–6
-    const planMealIds = createdMealIds;
-    const items = planMealIds.map((mealId, idx) => ({
-      mealId,
+    // Distribute created meals round-robin across days 0–6
+    const items = createdMeals.map((meal, idx) => ({
+      mealId: meal.id,
       dayOfWeek: idx % 7,
-      servings: upload.meals[idx]?.servings ?? 1,
+      servings: meal.servings,
     }));
 
     try {

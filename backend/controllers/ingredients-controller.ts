@@ -15,7 +15,7 @@ export const createIngredientSchema = z.object({
 export const updateIngredientSchema = createIngredientSchema.partial().extend({
   preserveStockOnZero: z.boolean().optional(),
 }).refine(
-  (data) => Object.keys(data).length > 0,
+  (data) => Object.keys(data).some((key) => key !== 'preserveStockOnZero'),
   { message: 'At least one field must be provided' }
 );
 
@@ -65,33 +65,40 @@ export async function updateIngredient(
     const { preserveStockOnZero, ...data } = req.body as z.infer<typeof updateIngredientSchema>;
     const weightFieldChanged =
       data.quantity !== undefined || data.weightPerQuantityGrams !== undefined;
-    const updateData: typeof data & { stockWeightGrams?: number } = { ...data };
 
-    if (weightFieldChanged) {
-      const current = await prisma.ingredient.findUnique({ where: { id } });
-      if (!current) {
-        res.status(404).json({ data: null, error: { message: 'Ingredient not found' }, status: 404 });
-        return;
-      }
-      const oldTotalWeight = Number(current.quantity) * Number(current.weightPerQuantityGrams);
-      const nextQuantity = data.quantity ?? Number(current.quantity);
-      const nextWeightPerQuantityGrams =
-        data.weightPerQuantityGrams ?? Number(current.weightPerQuantityGrams);
-      const newTotalWeight = nextQuantity * nextWeightPerQuantityGrams;
-      if (newTotalWeight === 0) {
-        if (!preserveStockOnZero) {
-          // Purchase zeroed out manually: nothing purchased, so no stock remains.
-          updateData.stockWeightGrams = 0;
+    const ingredient = await prisma.$transaction(async (tx) => {
+      const updateData: typeof data & { stockWeightGrams?: number } = { ...data };
+
+      if (weightFieldChanged) {
+        const current = await tx.ingredient.findUnique({ where: { id } });
+        if (!current) {
+          throw Object.assign(new Error('Ingredient not found'), { statusCode: 404 });
         }
-      } else {
-        // Preserve consumed grams — only adjust stock by the change in total weight
-        updateData.stockWeightGrams = Number(current.stockWeightGrams) + (newTotalWeight - oldTotalWeight);
+        const oldTotalWeight = Number(current.quantity) * Number(current.weightPerQuantityGrams);
+        const nextQuantity = data.quantity ?? Number(current.quantity);
+        const nextWeightPerQuantityGrams =
+          data.weightPerQuantityGrams ?? Number(current.weightPerQuantityGrams);
+        const newTotalWeight = nextQuantity * nextWeightPerQuantityGrams;
+        if (newTotalWeight === 0) {
+          if (!preserveStockOnZero) {
+            // Purchase zeroed out manually: nothing purchased, so no stock remains.
+            updateData.stockWeightGrams = 0;
+          }
+        } else {
+          // Preserve consumed grams — only adjust stock by the change in total weight.
+          // Clamp at 0 so shrinking a purchase below what meals already consumed
+          // cannot drive stock negative.
+          updateData.stockWeightGrams = Math.max(
+            0,
+            Number(current.stockWeightGrams) + (newTotalWeight - oldTotalWeight)
+          );
+        }
       }
-    }
 
-    const ingredient = await prisma.ingredient.update({
-      where: { id },
-      data: updateData,
+      return tx.ingredient.update({
+        where: { id },
+        data: updateData,
+      });
     });
     res.json({ data: serializeIngredient(ingredient), error: null, status: 200 });
   } catch (err) {

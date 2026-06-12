@@ -1,10 +1,8 @@
 // Hook for fetching and mutating the ingredients list via the API
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api';
+import { ingredientsCache, invalidateIngredientData } from '../utils/api-cache';
 import type { Ingredient } from '../utils/types';
-
-let _cache: Ingredient[] | null = null;
-let _fetching = false;
 
 interface CreateIngredientBody {
   name: string;
@@ -38,19 +36,14 @@ export function useIngredients(): UseIngredients {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    if (_cache) { setItems(_cache); setLoading(false); return; }
-    if (_fetching) return;
-    _fetching = true;
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<Ingredient[]>('/api/ingredients');
-      _cache = data;
+      const data = await ingredientsCache.load(() => apiGet<Ingredient[]>('/api/ingredients'));
       setItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load ingredients');
     } finally {
-      _fetching = false;
       setLoading(false);
     }
   }, []);
@@ -59,14 +52,14 @@ export function useIngredients(): UseIngredients {
     fetchAll();
   }, [fetchAll]);
 
-  const refresh = useCallback(async () => { _cache = null; await fetchAll(); }, [fetchAll]);
+  const refresh = useCallback(async () => { ingredientsCache.invalidate(); await fetchAll(); }, [fetchAll]);
 
   const create = useCallback(async (body: CreateIngredientBody) => {
     setMutating(true);
     setError(null);
     try {
       const created = await apiPost<Ingredient>('/api/ingredients', body);
-      _cache = null;
+      invalidateIngredientData();
       setItems((current) => [...current, created]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create ingredient');
@@ -81,7 +74,7 @@ export function useIngredients(): UseIngredients {
     setError(null);
     try {
       const updated = await apiPut<Ingredient>(`/api/ingredients/${id}`, body);
-      _cache = null;
+      invalidateIngredientData();
       setItems((current) => current.map((i) => (i.id === id ? updated : i)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update ingredient');
@@ -96,7 +89,7 @@ export function useIngredients(): UseIngredients {
     setError(null);
     try {
       await apiDelete<{ id: number }>(`/api/ingredients/${id}`);
-      _cache = null;
+      invalidateIngredientData();
       setItems((current) => current.filter((i) => i.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete ingredient');

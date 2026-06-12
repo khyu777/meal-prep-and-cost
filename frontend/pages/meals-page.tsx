@@ -87,6 +87,7 @@ export default function MealsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const [expandedMealIds, setExpandedMealIds] = useState<number[]>([]);
 
   if (mealsLoading || ingredientsLoading || plansLoading) return <LoadingSpinner />;
@@ -272,8 +273,18 @@ export default function MealsPage() {
 
   async function handleDeleteAll() {
     setDeleteAllConfirm(false);
+    setBulkError(null);
+    // Delete serially to avoid SQLite write contention; keep going past failures
+    let failed = 0;
     for (const meal of visibleMeals) {
-      await remove(meal.id);
+      try {
+        await remove(meal.id);
+      } catch {
+        failed++;
+      }
+    }
+    if (failed > 0) {
+      setBulkError(`Failed to delete ${failed} of ${visibleMeals.length} meals.`);
     }
     setExpandedMealIds([]);
     await refreshIngredients();
@@ -325,6 +336,7 @@ export default function MealsPage() {
       </div>
 
       {mealsError && <ErrorMessage message={mealsError} />}
+      {bulkError && <ErrorMessage message={bulkError} />}
 
       {showExistingPicker && (
         <section className={styles.existingSection}>

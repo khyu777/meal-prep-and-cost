@@ -1,10 +1,8 @@
 // Hook for fetching and mutating the meals list via the API
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api';
+import { mealsCache, invalidateMealData } from '../utils/api-cache';
 import type { MealWithCost } from '../utils/types';
-
-let _cache: MealWithCost[] | null = null;
-let _fetching = false;
 
 interface MealIngredientInput {
   ingredientId: number;
@@ -43,19 +41,14 @@ export function useMeals(): UseMeals {
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    if (_cache) { setItems(_cache); setLoading(false); return; }
-    if (_fetching) return;
-    _fetching = true;
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<MealWithCost[]>('/api/meals');
-      _cache = data;
+      const data = await mealsCache.load(() => apiGet<MealWithCost[]>('/api/meals'));
       setItems(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load meals');
     } finally {
-      _fetching = false;
       setLoading(false);
     }
   }, []);
@@ -69,7 +62,7 @@ export function useMeals(): UseMeals {
     setError(null);
     try {
       const created = await apiPost<MealWithCost>('/api/meals', body);
-      _cache = null;
+      invalidateMealData();
       setItems((current) => [...current, created]);
       return created;
     } catch (err) {
@@ -85,7 +78,7 @@ export function useMeals(): UseMeals {
     setError(null);
     try {
       const updated = await apiPut<MealWithCost>(`/api/meals/${id}`, body);
-      _cache = null;
+      invalidateMealData();
       setItems((current) => current.map((m) => (m.id === id ? updated : m)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update meal');
@@ -100,7 +93,7 @@ export function useMeals(): UseMeals {
     setError(null);
     try {
       await apiDelete<{ id: number }>(`/api/meals/${id}`);
-      _cache = null;
+      invalidateMealData();
       setItems((current) => current.filter((m) => m.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete meal');
@@ -115,7 +108,7 @@ export function useMeals(): UseMeals {
     setError(null);
     try {
       const updated = await apiPost<MealWithCost[]>('/api/meals/auto-portion', { mealIds });
-      _cache = null;
+      invalidateMealData();
       setItems((current) => {
         const map = new Map(updated.map((m) => [m.id, m]));
         return current.map((m) => map.get(m.id) ?? m);

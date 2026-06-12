@@ -94,7 +94,20 @@ export default function IngredientsPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const addPricePer100g = pricePer100gPreview(addForm);
+
+  function mealsUsingIngredient(id: number): string[] {
+    return meals
+      .filter((meal) => meal.ingredients.some((mi) => mi.ingredientId === id))
+      .map((meal) => meal.name);
+  }
+
+  function deleteMessage(id: number): string {
+    const usedBy = mealsUsingIngredient(id);
+    if (usedBy.length === 0) return 'Are you sure you want to delete this ingredient?';
+    return `This ingredient is used by ${usedBy.length} meal${usedBy.length === 1 ? '' : 's'} (${usedBy.join(', ')}). Deleting it removes it from those meals and changes their costs. Delete anyway?`;
+  }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -168,8 +181,18 @@ export default function IngredientsPage() {
 
   async function handleDeleteAll() {
     setDeleteAllConfirm(false);
+    setBulkError(null);
+    // Delete serially to avoid SQLite write contention; keep going past failures
+    let failed = 0;
     for (const ingredient of displayedItems) {
-      await remove(ingredient.id);
+      try {
+        await remove(ingredient.id);
+      } catch {
+        failed++;
+      }
+    }
+    if (failed > 0) {
+      setBulkError(`Failed to delete ${failed} of ${displayedItems.length} ingredients.`);
     }
   }
 
@@ -186,6 +209,7 @@ export default function IngredientsPage() {
         )}
       </div>
       {error && <ErrorMessage message={error} />}
+      {bulkError && <ErrorMessage message={bulkError} />}
 
       <section className={styles.addSection}>
         <h2 className={styles.sectionTitle}>Add Ingredient</h2>
@@ -228,6 +252,7 @@ export default function IngredientsPage() {
           <select
             className={styles.select}
             aria-label="Weight unit"
+            title="ml is treated as grams (1 ml ≈ 1 g, accurate for water-like liquids)"
             value={addForm.weightPerQuantityUnit}
             onChange={(e) => setAddForm({ ...addForm, weightPerQuantityUnit: e.target.value as WeightUnit })}
           >
@@ -300,6 +325,7 @@ export default function IngredientsPage() {
                     <select
                       className={styles.select}
                       aria-label="Weight unit"
+                      title="ml is treated as grams (1 ml ≈ 1 g, accurate for water-like liquids)"
                       value={editState.weightPerQuantityUnit}
                       onChange={(e) => setEditState({ ...editState, weightPerQuantityUnit: e.target.value as WeightUnit })}
                     >
@@ -357,7 +383,7 @@ export default function IngredientsPage() {
 
       {deleteTarget && (
         <ConfirmDialog
-          message="Are you sure you want to delete this ingredient?"
+          message={deleteMessage(deleteTarget)}
           onConfirm={() => handleDelete(deleteTarget)}
           onCancel={() => setDeleteTarget(null)}
         />

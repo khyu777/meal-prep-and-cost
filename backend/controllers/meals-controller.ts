@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client';
 import prisma from '../models/prisma-client';
 import { computeMealCost } from '../utils/cost-calculator';
 import { serializeIngredient } from '../utils/ingredient-serializer';
-import { createMealSchema, updateMealSchema, autoPortionSchema } from '../models/meal-schemas';
+import { createMealSchema, updateMealSchema } from '../models/meal-schemas';
 
 // Shared include clause for meals with ingredients and their purchase data
 const mealInclude = {
@@ -174,6 +174,23 @@ export async function updateMeal(
       req.body as z.infer<typeof updateMealSchema>;
 
     const updated = await prisma.$transaction(async (tx) => {
+      if (servings !== undefined) {
+        // Reject shrinking servings below what existing plans have already scheduled
+        const planItems = await tx.mealPlanItem.findMany({ where: { mealId: id } });
+        const servingsByPlan = new Map<number, number>();
+        for (const item of planItems) {
+          servingsByPlan.set(item.planId, (servingsByPlan.get(item.planId) ?? 0) + item.servings);
+        }
+        const maxScheduled = Math.max(0, ...servingsByPlan.values());
+        if (maxScheduled > servings) {
+          throw Object.assign(
+            new Error(
+              `A plan already schedules ${maxScheduled} servings of this meal; reduce the plan first`
+            ),
+            { statusCode: 422 }
+          );
+        }
+      }
       if (ingredients !== undefined) {
         // Restore gram stock from old ingredient quantities before deducting new ones
         const oldIngredients = await tx.mealIngredient.findMany({ where: { mealId: id } });
