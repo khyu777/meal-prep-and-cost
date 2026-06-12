@@ -293,6 +293,23 @@ This is the portable import file — keep the `tracker_upload` wrapper key so th
 
 ---
 
+## Prep Session — Cook Everything Once (~X hours)
+
+[Include this section only when `meal_prep` is `true`. Omit entirely for fresh-cook plans.]
+
+Synthesize a single unified prep session from the `steps` arrays across all meals in `output_json.meals`. De-duplicate shared tasks (e.g., batch-cooking a grain used in multiple meals appears once). Order steps logically: longest-running tasks first (grains, braised proteins), oven waves in sequence, stovetop tasks in parallel windows, sauces and light prep last. Estimate a realistic total session time and use it in the header.
+
+**Prep these N components in one batch session. Every meal below is just assembly + reheat.**
+
+| Step | Task | Time | Notes |
+|---|---|---|---|
+| 1 | [first task] | [X min] | [tip or constraint] |
+| 2 | [next task] | [X min] | [tip or constraint] |
+...
+| N | Portion all components into labeled airtight containers. Refrigerate. | 15 min | [fridge life summary for each component type] |
+
+---
+
 ## Assembly Guide
 
 Each meal is assembled cold or reheated. No stovetop needed at mealtime.

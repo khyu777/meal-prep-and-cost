@@ -77,6 +77,26 @@ async function validatePlanItemServings(
   }
 }
 
+async function assertUniquePlanWeek(
+  tx: Prisma.TransactionClient,
+  startDate: Date,
+  endDate: Date,
+  excludeId?: number
+): Promise<void> {
+  const existing = await tx.mealPlan.findFirst({
+    where: {
+      startDate,
+      endDate,
+      ...(excludeId !== undefined && { id: { not: excludeId } }),
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    throw Object.assign(new Error('A meal plan already exists for this week'), { statusCode: 409 });
+  }
+}
+
 export async function getAllPlans(
   _req: Request,
   res: Response,
@@ -126,8 +146,11 @@ export async function createPlan(
   try {
     const { name, startDate, endDate, items } =
       req.body as z.infer<typeof createPlanSchema>;
+    const parsedStartDate = new Date(startDate);
+    const parsedEndDate = new Date(endDate);
 
     const plan = await prisma.$transaction(async (tx) => {
+      await assertUniquePlanWeek(tx, parsedStartDate, parsedEndDate);
       await validatePlanItemServings(tx, items);
       const mealIds = [...new Set(items.map((i) => i.mealId))];
       const snapshotCosts = await computeSnapshotCosts(tx, mealIds);
@@ -135,8 +158,8 @@ export async function createPlan(
       return tx.mealPlan.create({
         data: {
           name,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
+          startDate: parsedStartDate,
+          endDate: parsedEndDate,
           items: {
             create: items.map((item) => ({
               mealId: item.mealId,
@@ -171,6 +194,24 @@ export async function updatePlan(
       req.body as z.infer<typeof updatePlanSchema>;
 
     const updated = await prisma.$transaction(async (tx) => {
+      let parsedStartDate: Date | undefined;
+      let parsedEndDate: Date | undefined;
+
+      if (startDate !== undefined || endDate !== undefined) {
+        const current = await tx.mealPlan.findUnique({
+          where: { id },
+          select: { startDate: true, endDate: true },
+        });
+
+        if (!current) {
+          throw Object.assign(new Error('Plan not found'), { statusCode: 404 });
+        }
+
+        parsedStartDate = startDate !== undefined ? new Date(startDate) : current.startDate;
+        parsedEndDate = endDate !== undefined ? new Date(endDate) : current.endDate;
+        await assertUniquePlanWeek(tx, parsedStartDate, parsedEndDate, id);
+      }
+
       if (items !== undefined) {
         await validatePlanItemServings(tx, items);
         const mealIds = [...new Set(items.map((i) => i.mealId))];
@@ -190,8 +231,8 @@ export async function updatePlan(
         where: { id },
         data: {
           ...(name !== undefined && { name }),
-          ...(startDate !== undefined && { startDate: new Date(startDate) }),
-          ...(endDate !== undefined && { endDate: new Date(endDate) }),
+          ...(parsedStartDate !== undefined && { startDate: parsedStartDate }),
+          ...(parsedEndDate !== undefined && { endDate: parsedEndDate }),
         },
         include: planInclude,
       });

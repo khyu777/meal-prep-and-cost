@@ -8,6 +8,7 @@ import plansRouter from '../../backend/routes/plans';
 jest.mock('../../backend/models/prisma-client', () => {
   const mealPlan = {
     findMany: jest.fn(),
+    findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -82,6 +83,7 @@ const samplePlan = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (mockPrisma.mealPlan.findFirst as jest.Mock).mockResolvedValue(null);
   (mockPrisma.meal.findMany as jest.Mock).mockResolvedValue([
     { id: 1, name: 'Grilled Chicken', servings: 2, ingredients: sampleMeal.ingredients },
   ]);
@@ -238,6 +240,23 @@ describe('Plans API', () => {
       expect(res.status).toBe(400);
       expect(res.body.data).toBeNull();
     });
+
+    it('returns 409 when a plan already exists for the same week', async () => {
+      (mockPrisma.mealPlan.findFirst as jest.Mock).mockResolvedValue({ id: 2 });
+
+      const res = await request(buildApp())
+        .post('/api/plans')
+        .send({
+          name: 'Duplicate Week',
+          startDate: '2024-01-01T00:00:00.000Z',
+          endDate: '2024-01-07T00:00:00.000Z',
+          items: [{ mealId: 1, dayOfWeek: 1, servings: 1 }],
+        });
+
+      expect(res.status).toBe(409);
+      expect(res.body.data).toBeNull();
+      expect(mockPrisma.mealPlan.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('PUT /api/plans/:id', () => {
@@ -270,6 +289,22 @@ describe('Plans API', () => {
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ error: null, status: 200 });
       expect(mockPrisma.mealPlanItem.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('returns 409 when date changes collide with another plan week', async () => {
+      (mockPrisma.mealPlan.findUnique as jest.Mock).mockResolvedValue({
+        startDate: samplePlan.startDate,
+        endDate: samplePlan.endDate,
+      });
+      (mockPrisma.mealPlan.findFirst as jest.Mock).mockResolvedValue({ id: 2 });
+
+      const res = await request(buildApp())
+        .put('/api/plans/1')
+        .send({ startDate: '2024-01-08T00:00:00.000Z' });
+
+      expect(res.status).toBe(409);
+      expect(res.body.data).toBeNull();
+      expect(mockPrisma.mealPlan.update).not.toHaveBeenCalled();
     });
 
     it('returns 404 when plan does not exist', async () => {

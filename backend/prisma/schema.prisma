@@ -50,6 +50,8 @@ model MealPlan {
   endDate   DateTime
   createdAt DateTime       @default(now())
   items     MealPlanItem[]
+
+  @@unique([startDate, endDate])
 }
 
 model MealPlanItem {
