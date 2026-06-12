@@ -94,7 +94,8 @@ If `meal_prep: true`, apply these constraints on top of all other rules:
 
 **Cooking method constraints:**
 - Only include meals that reheat well: roasted, braised, sautéed, grain bowls, soups, stews, stir-fries
-- Exclude: dishes with fresh-cooked eggs, delicate fish, crispy textures that go soggy, anything assembled fresh that can't be stored
+- Exclude: delicate fish, crispy textures that go soggy, anything assembled fresh that can't be stored
+- Fresh-cooked eggs are allowed as a flagged day-of addition (e.g., fried egg on bibimbap) — note them explicitly; do not exclude the meal
 
 **Structure:**
 - Lunches should be lighter variations of dinner components (e.g. dinner = braised chicken + roasted veg; lunch = same chicken over greens with vinaigrette)

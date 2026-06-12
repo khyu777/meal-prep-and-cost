@@ -301,23 +301,24 @@ Synthesize a single unified prep session from the `steps` arrays across all meal
 
 **Prep these N components in one batch session. Every meal below is just assembly + reheat.**
 
-| Step | Task | Time | Notes |
-|---|---|---|---|
-| 1 | [first task] | [X min] | [tip or constraint] |
-| 2 | [next task] | [X min] | [tip or constraint] |
+| Step | Task | Ingredients | Time | Notes |
+|---|---|---|---|---|
+| 1 | [first task] | [quantities used in this step] | [X min] | [tip or constraint] |
+| 2 | [next task] | [quantities used in this step] | [X min] | [tip or constraint] |
 ...
-| N | Portion all components into labeled airtight containers. Refrigerate. | 15 min | [fridge life summary for each component type] |
+| N | Assemble all meals into labeled airtight containers following the guide below. ⚠️ Flag any stew/grain pairs to store separately (grains go soggy in broth). ⚠️ Flag any day-of additions (e.g., fresh eggs) with a note on the container. | — | 20 min | [fridge life summary for each component type] |
 
 ---
 
-## Assembly Guide
+## Assembly Guide *(pack on prep day — reheat to serve)*
 
-Each meal is assembled cold or reheated. No stovetop needed at mealtime.
+Pack each meal into a labeled airtight container during prep. At mealtime, just reheat and eat.
 
 ### Day 1 Lunch — Roasted Chickpea Bowl
-**Ingredients:** Chickpeas — 80g · Cucumber — 120g · Tahini — 30g · Olive oil — 12g · Pita bread — 120g
+**Ingredients:** Roasted chickpeas — 80g *(Step N)* · Cucumber — 120g (sliced) · Tahini sauce — 30g *(Step N)* · Pita bread — 120g
 
-Reheat chickpeas. Top with cucumber slices and tahini sauce. Serve with warm pita.
+**Pack:** [what goes in the container, using prepped/cooked component names]
+**Reheat:** [how to reheat day-of; or "Serve cold — no heating needed" if applicable]
 
 ---
 
@@ -325,7 +326,7 @@ Reheat chickpeas. Top with cucumber slices and tahini sauce. Serve with warm pit
 ...
 ```
 
-Gram amounts come from `output_json.tracker_upload.meals[i].ingredients[].grams`. Every meal's **Ingredients** line must list each ingredient with its gram amount (e.g. `Chicken thighs — 150g · White rice — 90g`). Use the grams from `tracker_upload`, not the batch-sized quantities from `recipe_ingredients`.
+Every meal's **Ingredients** line must list each ingredient in its **prepped/cooked form** with a step reference (e.g. `Sliced gochujang chicken — 170g *(Step 6)*`, `Cooked barley — 74g`, `Seasoned spinach — 60g *(Step 7)*`). Raw ingredients used as-is (cucumber, kimchi, scallion) stay as-is with a prep note (e.g. `sliced`, `julienned`). Gram amounts come from `output_json.tracker_upload.meals[i].ingredients[].grams`. Use grams from `tracker_upload`, not batch-sized quantities from `recipe_ingredients`. Condiments/seasonings already incorporated into a prepped component (e.g., marinade baked into chicken) should be omitted from this list — only list what you physically place into the container.
 
 ```
 ## Produce

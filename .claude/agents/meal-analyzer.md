@@ -340,4 +340,5 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
 - Assume a competent home cook — skip obvious basics ("wash your hands", "get a pan")
 - Include temperatures and times where they matter (roasting, baking, simmering)
 - Example style: "Roast chickpeas at 425°F for 25 min, shaking halfway, until crispy."
+- **In meal prep mode:** label each batch component with its step number in the prep session (e.g., "Step 3 — jangjorim beef", "Step 7 — seasoned spinach"). The meal-planner uses these labels to generate `*(Step N)*` references in the Assembly Guide ingredient lists.
 
