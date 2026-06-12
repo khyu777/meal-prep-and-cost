@@ -58,7 +58,7 @@ AskUserQuestion({
 ```
 
 Compute `weekStart` as a `YYYY-MM-DD` string:
-- "This week" → if today is Sunday, use today; otherwise use the next Sunday
+- "This week" → if today is Sunday, use today; otherwise use the most recent past Sunday
 - "Next week" → 7 days after "this week" Sunday
 - "Custom date" → ask for the date via a follow-up free-text prompt
 

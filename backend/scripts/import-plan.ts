@@ -21,6 +21,7 @@ interface UploadMealIngredient {
 interface UploadMeal {
   name: string;
   description?: string;
+  day_of_week?: number;
   servings: number;
   ingredients: UploadMealIngredient[];
 }
@@ -159,7 +160,7 @@ async function main() {
   // Create meals
   let mealsCreated = 0;
   // Track servings alongside each created id so plan items stay aligned even if some meals fail
-  const createdMeals: { id: number; servings: number }[] = [];
+  const createdMeals: { id: number; servings: number; dayOfWeek?: number }[] = [];
   const mealFailures: { name: string; error: string }[] = [];
 
   for (const meal of upload.meals) {
@@ -179,7 +180,7 @@ async function main() {
           ingredients,
         }),
       });
-      createdMeals.push({ id: createdMeal.id, servings: meal.servings });
+      createdMeals.push({ id: createdMeal.id, servings: meal.servings, dayOfWeek: meal.day_of_week });
       mealsCreated++;
       console.log(`  + Created meal "${meal.name}"`);
     } catch (err) {
@@ -197,10 +198,10 @@ async function main() {
     end.setDate(end.getDate() + 6);
     end.setHours(23, 59, 59, 999);
 
-    // Distribute created meals round-robin across days 0–6
+    // Use day_of_week from upload JSON if present; fall back to round-robin across 0–6
     const items = createdMeals.map((meal, idx) => ({
       mealId: meal.id,
-      dayOfWeek: idx % 7,
+      dayOfWeek: meal.dayOfWeek ?? idx % 7,
       servings: meal.servings,
     }));
 

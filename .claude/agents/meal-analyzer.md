@@ -117,6 +117,7 @@ When standalone (`/meal-analyzer`), there is no location input → use US averag
       {
         "name": "Roasted Chickpea Bowl",
         "description": "Chickpeas tahini cucumber pita",
+        "day_of_week": 1,
         "servings": 2,
         "ingredients": [
           { "name": "Canned chickpeas", "grams": 213 }
@@ -267,6 +268,7 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
     {
       "name": "Roasted Chickpea Bowl",
       "description": "Chickpeas tahini cucumber pita",
+      "day_of_week": 1,
       "servings": 2,
       "ingredients": [
         { "name": "Canned chickpeas", "grams": 213 }
@@ -275,6 +277,8 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
   ]
 }
 ```
+
+`day_of_week` maps brainstormer `day` directly to the integer (Day 1 → 1, Day 2 → 2, …). Use the same value for both lunch and dinner on the same day. 0 = Sunday, 1 = Monday, …, 6 = Saturday.
 
 ### Rules for `tracker_upload.ingredients`
 - `price` = the grocery item's `usage_cost` from the grocery list.
