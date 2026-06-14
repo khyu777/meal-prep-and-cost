@@ -4,6 +4,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { reconcilePurchaseQuantities } from '../utils/reconcile-purchase';
 
 interface UploadIngredient {
   name: string;
@@ -106,6 +107,20 @@ async function main() {
   const upload: TrackerUpload = raw.tracker_upload ?? (raw as unknown as TrackerUpload);
 
   console.log(`Importing from: ${inputPath}`);
+
+  // Backstop: clamp over-bought purchase quantities to the minimum unit that covers
+  // actual meal usage, then rewrite the file so the shopping list reflects reality.
+  const { ingredients: reconciled, changes } = reconcilePurchaseQuantities(upload);
+  if (changes.length > 0) {
+    upload.ingredients = reconciled;
+    console.log('Reconciled over-bought quantities (purchase now matches usage):');
+    for (const c of changes) {
+      console.log(`  ~ ${c.name}: ${c.fromQuantity} → ${c.toQuantity} ${c.unit} (uses ${c.usageGrams}g)`);
+    }
+    const rewritten = raw.tracker_upload ? { ...raw, tracker_upload: upload } : upload;
+    fs.writeFileSync(inputPath, JSON.stringify(rewritten, null, 2) + '\n');
+    console.log(`  → Rewrote ${path.basename(inputPath)} with reconciled quantities\n`);
+  }
 
   // Health check
   try {

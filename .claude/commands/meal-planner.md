@@ -350,8 +350,17 @@ Every meal's **Ingredients** line must list each ingredient in its **prepped/coo
 - [ ] Olive oil — check stock — ~$0.20/tbsp
 </details>
 
+### Expected leftovers
+- [Item] — buy 1 [unit], plan uses ~Ng — ~Mg leftover (only sold by the [tub/jar/head])
+
 *Prices are estimates for {location, or "US average" if unset} and may vary by store.*
 ```
+
+Grocery quantities come straight from `output_json.grocery_list[].quantity`, which the analyzer
+sets to the **minimum purchasable unit that covers usage** — so each flexible-unit item (lbs, whole,
+cans) should equal what the prep session actually uses, rounded up to one unit. Do not pad them.
+List under **Expected leftovers** only the big-package staples (tub/jar/head/bag) whose single unit
+exceeds usage — that leftover is unavoidable. Omit the section if there are none.
 
 Once written, proceed to Step 7 before notifying the user.
 

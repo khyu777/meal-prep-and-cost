@@ -139,7 +139,8 @@ Return JSON only. No preamble, no markdown fences.
 
 ### Meal prep mode (`meal_prep: true`)
 - Scale ingredient quantities to **batch size** — enough to cover all meals that share that ingredient across the week, not per-meal quantities
-- Example: if chicken thighs appear in 4 meals, quantity = total needed for all 4, not just 1
+- "Batch size" = the **sum of per-meal grams** across every meal that uses the ingredient, then converted to the minimum purchasable unit (see "Buy to match usage" below). It is NOT an eyeballed bulk number — buying "3 lbs chicken" when the meals only use 453g is wrong
+- Example: if chicken thighs appear in 4 meals, quantity = total grams needed for all 4 ÷ unit weight, rounded up — not a round bulk figure
 - Grocery list still deduplicates and aggregates as normal — batch scaling happens before aggregation
 
 ### Decomposition
@@ -165,7 +166,16 @@ Return JSON only. No preamble, no markdown fences.
 - Staples: set `quantity: null`, `unit: null`
 - Do NOT flag specialty ingredients as staples (tahini, fish sauce, harissa, etc.)
 - Default assumption: 2 adults, standard portions
-- Round up to nearest purchasable unit (1.5 cans → 2 cans)
+
+### Buy to match usage (no overbuying)
+- Set each `quantity` to the **minimum** purchasable unit whose total grams cover the summed
+  usage across all meals — do not exceed it. No bulk padding.
+- Formula: `quantity = ceil(Σ grams used across all meals ÷ weight_per_quantity_grams)`
+  (minimum 1 when the ingredient is used at all).
+- Example — chicken thighs used 170g + 113g + 170g = 453g, sold by the lb (454 g):
+  `ceil(453 ÷ 454) = 1 lb`. Buy **1 lb**, never 3.
+- Items sold only in large fixed packages (a tub, jar, head, bag) stay at 1 unit even when
+  usage is far below the package — that leftover is unavoidable, not an excuse to round to 2.
 
 ---
 
@@ -282,8 +292,11 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
 
 ### Rules for `tracker_upload.ingredients`
 - `price` = the grocery item's `usage_cost` from the grocery list.
-- `weight_per_quantity_grams` = total grams for that item ÷ `quantity` (so `pricePerGram` matches the analyzer's numbers).
-- `quantity × weight_per_quantity_grams` **must be ≥ the sum of that ingredient's grams across all meals** — round purchase quantity up so no meal 422s on stock.
+- `weight_per_quantity_grams` = grams in one purchasable unit (e.g. 454 for 1 lb, 425 for one 15oz can).
+- `quantity` = the **minimum purchasable unit** that covers usage:
+  `quantity = ceil(Σ grams across all meals ÷ weight_per_quantity_grams)`, minimum 1 when used.
+  This is a tight equality, not just a floor — do not buy more than this (chicken using 453g → 1 lb, never 3).
+- `quantity` here **must equal** the matching `grocery_list[]` entry's `quantity` — both come from the same Σ grams.
 - Include **all** ingredients that appear in any meal, including staples that appear in `recipe_ingredients`.
 - Name must exactly match the names used in `meals[].ingredients[].name`.
 
