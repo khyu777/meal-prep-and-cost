@@ -45,18 +45,24 @@ export function reconcilePurchaseQuantities(input: ReconcileInput): ReconcileRes
   const usageByName = new Map<string, number>();
   for (const meal of input.meals) {
     for (const mi of meal.ingredients) {
+      const units = typeof mi.units === 'number' ? mi.units : 0;
       const key = mi.name.toLowerCase();
-      usageByName.set(key, (usageByName.get(key) ?? 0) + mi.units);
+      usageByName.set(key, (usageByName.get(key) ?? 0) + units);
     }
   }
 
   const changes: ReconcileChange[] = [];
 
   const ingredients = input.ingredients.map((ing) => {
+    // No purchase quantity set — nothing to clamp.
+    if (ing.quantity == null) {
+      return ing;
+    }
+
     const usageUnits = usageByName.get(ing.name.toLowerCase()) ?? 0;
 
-    // No usage — leave as-is.
-    if (usageUnits <= 0) {
+    // No usage or non-numeric usage — leave as-is.
+    if (!usageUnits || !isFinite(usageUnits)) {
       return ing;
     }
 

@@ -8,14 +8,17 @@ import { reconcilePurchaseQuantities } from '../utils/reconcile-purchase';
 
 interface UploadIngredient {
   name: string;
-  quantity: number;
+  quantity: number | null;
   unit: string;
-  price_per_unit: number;
+  weight_per_quantity_grams: number;
+  price_per_unit?: number;
+  price?: number;
 }
 
 interface UploadMealIngredient {
   name: string;
-  units: number;
+  units?: number;
+  grams?: number;
 }
 
 interface UploadMeal {
@@ -108,9 +111,17 @@ async function main() {
 
   // Backstop: clamp over-bought purchase quantities to the minimum unit that covers
   // actual meal usage, then rewrite the file so the shopping list reflects reality.
-  const { ingredients: reconciled, changes } = reconcilePurchaseQuantities(upload);
+  // Skip when all quantities are null (grams-based format — no purchase qty to clamp).
+  const hasQuantities = upload.ingredients.some(i => i.quantity != null);
+  const changes = hasQuantities
+    ? reconcilePurchaseQuantities(upload as Parameters<typeof reconcilePurchaseQuantities>[0]).changes
+    : [];
   if (changes.length > 0) {
-    upload.ingredients = reconciled;
+    const qtyByName = new Map(changes.map(c => [c.name.toLowerCase(), c.toQuantity]));
+    upload.ingredients = upload.ingredients.map(i => {
+      const qty = qtyByName.get(i.name.toLowerCase());
+      return qty != null ? { ...i, quantity: qty } : i;
+    });
     console.log('Reconciled over-bought quantities (purchase now matches usage):');
     for (const c of changes) {
       console.log(`  ~ ${c.name}: ${c.fromQuantity} → ${c.toQuantity} ${c.unit} (uses ${c.usageUnits} ${c.unit})`);
@@ -146,7 +157,7 @@ async function main() {
         method: 'PUT',
         body: JSON.stringify({
           unit: ing.unit,
-          pricePerUnit: ing.price_per_unit,
+          pricePerUnit: ing.price_per_unit ?? ing.price,
         }),
       });
       reused++;
@@ -157,7 +168,7 @@ async function main() {
         body: JSON.stringify({
           name: ing.name,
           unit: ing.unit,
-          pricePerUnit: ing.price_per_unit,
+          pricePerUnit: ing.price_per_unit ?? ing.price,
           stockUnits: 0,
         }),
       });
@@ -166,6 +177,11 @@ async function main() {
       console.log(`  + Created "${ing.name}" (0 stock — fill in actual amount bought)`);
     }
   }
+
+  // Build weight-per-unit map for grams → units conversion
+  const weightPerUnit = new Map<string, number>(
+    upload.ingredients.map(i => [i.name.toLowerCase(), i.weight_per_quantity_grams])
+  );
 
   // Create meals
   let mealsCreated = 0;
@@ -177,7 +193,12 @@ async function main() {
     const ingredients = meal.ingredients.map(mi => {
       const id = nameToId.get(mi.name.toLowerCase());
       if (!id) throw new Error(`No id found for ingredient "${mi.name}" — not in upload payload`);
-      return { ingredientId: id, quantity: 0, targetUnits: mi.units };
+      let targetUnits = mi.units;
+      if (targetUnits == null && mi.grams != null) {
+        const wpq = weightPerUnit.get(mi.name.toLowerCase());
+        targetUnits = wpq ? mi.grams / wpq : 0;
+      }
+      return { ingredientId: id, quantity: 0, targetUnits: targetUnits ?? 0 };
     });
 
     try {
