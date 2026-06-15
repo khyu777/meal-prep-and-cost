@@ -18,6 +18,7 @@ interface EditState {
   unit: string;
   pricePerUnit: string;
   stockUnits: string;
+  receiptTotal: string;
 }
 
 interface AddState {
@@ -25,6 +26,7 @@ interface AddState {
   unit: string;
   pricePerUnit: string;
   stockUnits: string;
+  receiptTotal: string;
 }
 
 const EMPTY_ADD: AddState = {
@@ -32,7 +34,15 @@ const EMPTY_ADD: AddState = {
   unit: '',
   pricePerUnit: '',
   stockUnits: '',
+  receiptTotal: '',
 };
+
+function computePriceFromReceipt(total: string, stockUnits: string): string {
+  const t = parseFloat(total);
+  const u = parseFloat(stockUnits);
+  if (!isNaN(t) && !isNaN(u) && u > 0) return (t / u).toFixed(4);
+  return '';
+}
 
 function dateFallsInWeek(dateValue: string, weekStart: Date, weekEnd: Date) {
   const date = new Date(dateValue);
@@ -196,9 +206,13 @@ export default function IngredientsPage() {
             type="number"
             step="0.01"
             min="0"
-            placeholder="Price per unit"
-            value={addForm.pricePerUnit}
-            onChange={(e) => setAddForm({ ...addForm, pricePerUnit: e.target.value })}
+            placeholder="Receipt total ($)"
+            value={addForm.receiptTotal}
+            onChange={(e) => {
+              const receiptTotal = e.target.value;
+              const computed = computePriceFromReceipt(receiptTotal, addForm.stockUnits);
+              setAddForm({ ...addForm, receiptTotal, pricePerUnit: computed || addForm.pricePerUnit });
+            }}
           />
           <input
             className={styles.input}
@@ -207,7 +221,21 @@ export default function IngredientsPage() {
             min="0"
             placeholder="Quantity in stock"
             value={addForm.stockUnits}
-            onChange={(e) => setAddForm({ ...addForm, stockUnits: e.target.value })}
+            onChange={(e) => {
+              const stockUnits = e.target.value;
+              const computed = computePriceFromReceipt(addForm.receiptTotal, stockUnits);
+              setAddForm({ ...addForm, stockUnits, pricePerUnit: computed || addForm.pricePerUnit });
+            }}
+          />
+          <input
+            className={styles.input}
+            type="number"
+            step="any"
+            min="0"
+            placeholder="Price per unit (auto-filled from receipt)"
+            value={addForm.pricePerUnit}
+            onChange={(e) => setAddForm({ ...addForm, pricePerUnit: e.target.value })}
+
           />
           <button className={styles.addBtn} type="submit">Add</button>
         </form>
@@ -253,9 +281,13 @@ export default function IngredientsPage() {
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="Price per unit"
-                      value={editState.pricePerUnit}
-                      onChange={(e) => setEditState({ ...editState, pricePerUnit: e.target.value })}
+                      placeholder="Receipt total ($)"
+                      value={editState.receiptTotal}
+                      onChange={(e) => {
+                        const receiptTotal = e.target.value;
+                        const computed = computePriceFromReceipt(receiptTotal, editState.stockUnits);
+                        setEditState({ ...editState, receiptTotal, pricePerUnit: computed || editState.pricePerUnit });
+                      }}
                     />
                     <input
                       className={styles.input}
@@ -264,7 +296,20 @@ export default function IngredientsPage() {
                       min="0"
                       placeholder="Quantity in stock"
                       value={editState.stockUnits}
-                      onChange={(e) => setEditState({ ...editState, stockUnits: e.target.value })}
+                      onChange={(e) => {
+                        const stockUnits = e.target.value;
+                        const computed = computePriceFromReceipt(editState.receiptTotal, stockUnits);
+                        setEditState({ ...editState, stockUnits, pricePerUnit: computed || editState.pricePerUnit });
+                      }}
+                    />
+                    <input
+                      className={styles.input}
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="Price per unit (auto-filled from receipt)"
+                      value={editState.pricePerUnit}
+                      onChange={(e) => setEditState({ ...editState, pricePerUnit: e.target.value })}
                     />
                     <button className={styles.saveBtn} type="submit">Save</button>
                     <button
@@ -293,6 +338,7 @@ export default function IngredientsPage() {
                         unit: ingredient.unit,
                         pricePerUnit: String(ingredient.pricePerUnit),
                         stockUnits: String(ingredient.stockUnits),
+                        receiptTotal: '',
                       })
                     }
                   >
