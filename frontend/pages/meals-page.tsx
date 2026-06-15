@@ -390,10 +390,10 @@ export default function MealsPage() {
                   />
                 </label>
               </div>
-
               <div className={styles.formRight}>
             <fieldset className={styles.fieldset}>
               <legend className={styles.legend}>Ingredients Used</legend>
+              <div className={styles.ingredientGrid}>
               {formState.ingredients.map((row) => {
                 const usedIds = new Set(
                   formState.ingredients
@@ -477,6 +477,7 @@ export default function MealsPage() {
                 </div>
                 );
               })}
+              </div>
               <button type="button" className={styles.addRowBtn} onClick={addIngredientRow}>
                 + Add ingredient
               </button>
@@ -559,6 +560,9 @@ export default function MealsPage() {
                                 </span>
                                 <span className={styles.ingredientDetailMeta}>
                                   {price === null ? '--' : `${formatCurrency(price)} / ${item.ingredient.unit}`}
+                                </span>
+                                <span className={styles.ingredientDetailCost}>
+                                  {price === null ? '--' : formatCurrency(price * Number(item.quantity))}
                                 </span>
                               </div>
                             );

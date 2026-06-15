@@ -117,7 +117,7 @@
 
 .formColumns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 2fr;
   gap: 1.5rem;
   align-items: start;
 }
@@ -163,15 +163,22 @@
   padding: 0 0.25rem;
 }
 
-.ingredientRow {
-  display: flex;
-  gap: 0.5rem;
+.ingredientGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px max-content max-content max-content max-content;
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.5rem;
 }
 
+.ingredientRow {
+  display: contents;
+}
+
 .select {
   flex: 2;
+  min-width: 0;
 }
 
 .unitSelect {
@@ -222,8 +229,8 @@
   border: 1px solid #bdbdbd;
   border-radius: 4px;
   font-size: 1rem;
-  flex: 1;
-  min-width: 70px;
+  flex: 0 0 80px;
+  width: 80px;
 }
 
 .qtyInput:focus,
@@ -373,7 +380,7 @@
 
 .ingredientDetailList {
   display: grid;
-  grid-template-columns: max-content max-content max-content;
+  grid-template-columns: max-content max-content max-content max-content;
   column-gap: 1rem;
   row-gap: 0.4rem;
 }
@@ -391,6 +398,13 @@
   color: #3d6b2e;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.ingredientDetailCost {
+  color: #1a3d0a;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: right;
 }
 
 @media (max-width: 640px) {
