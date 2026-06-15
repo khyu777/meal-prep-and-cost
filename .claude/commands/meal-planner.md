@@ -326,7 +326,7 @@ Pack each meal into a labeled airtight container during prep. At mealtime, just 
 ...
 ```
 
-Every meal's **Ingredients** line must list each ingredient in its **prepped/cooked form** with a step reference (e.g. `Sliced gochujang chicken — 170g *(Step 6)*`, `Cooked barley — 74g`, `Seasoned spinach — 60g *(Step 7)*`). Raw ingredients used as-is (cucumber, kimchi, scallion) stay as-is with a prep note (e.g. `sliced`, `julienned`). Gram amounts come from `output_json.tracker_upload.meals[i].ingredients[].grams`. Use grams from `tracker_upload`, not batch-sized quantities from `recipe_ingredients`. Condiments/seasonings already incorporated into a prepped component (e.g., marinade baked into chicken) should be omitted from this list — only list what you physically place into the container.
+Every meal's **Ingredients** line must list each ingredient in its **prepped/cooked form** with a step reference (e.g. `Sliced gochujang chicken — 0.375 lb *(Step 6)*`, `Cooked barley — 0.4 cup`, `Seasoned spinach — 0.35 bunch *(Step 7)*`). Raw ingredients used as-is (cucumber, kimchi, scallion) stay as-is with a prep note (e.g. `sliced`, `julienned`). Amounts come from `output_json.tracker_upload.meals[i].ingredients[].units`, expressed in each ingredient's unit. Use units from `tracker_upload`, not batch-sized quantities from `recipe_ingredients`. Condiments/seasonings already incorporated into a prepped component (e.g., marinade baked into chicken) should be omitted from this list — only list what you physically place into the container.
 
 ```
 ## Produce

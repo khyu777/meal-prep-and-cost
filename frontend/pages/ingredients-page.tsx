@@ -6,7 +6,7 @@ import { usePlans } from '../hooks/use-plans';
 import { useWeek } from '../hooks/use-week';
 import { planOverlapsWeek } from '../utils/week';
 import { formatCurrency } from '../utils/format-currency';
-import { formatGrams } from '../utils/format-grams';
+import { formatUnits } from '../utils/format-units';
 import LoadingSpinner from '../components/loading-spinner';
 import ErrorMessage from '../components/error-message';
 import ConfirmDialog from '../components/confirm-dialog';
@@ -15,59 +15,28 @@ import styles from './ingredients-page.module.css';
 interface EditState {
   id: number;
   name: string;
-  quantity: string;
-  price: string;
-  weightPerQuantityGrams: string;
-  weightPerQuantityUnit: WeightUnit;
+  unit: string;
+  pricePerUnit: string;
+  stockUnits: string;
 }
 
 interface AddState {
   name: string;
-  quantity: string;
-  price: string;
-  weightPerQuantityGrams: string;
-  weightPerQuantityUnit: WeightUnit;
+  unit: string;
+  pricePerUnit: string;
+  stockUnits: string;
 }
 
-type WeightUnit = 'g' | 'lb' | 'oz' | 'ml';
-
-const GRAMS_PER_POUND = 453.59237;
-const GRAMS_PER_OUNCE = 28.349523125;
 const EMPTY_ADD: AddState = {
   name: '',
-  quantity: '',
-  price: '',
-  weightPerQuantityGrams: '',
-  weightPerQuantityUnit: 'g',
+  unit: '',
+  pricePerUnit: '',
+  stockUnits: '',
 };
-
-function toGrams(value: number, unit: WeightUnit) {
-  if (unit === 'lb') return value * GRAMS_PER_POUND;
-  if (unit === 'oz') return value * GRAMS_PER_OUNCE;
-  return value;
-}
 
 function dateFallsInWeek(dateValue: string, weekStart: Date, weekEnd: Date) {
   const date = new Date(dateValue);
   return date >= weekStart && date <= weekEnd;
-}
-
-function pricePer100gPreview(form: AddState): number | null {
-  const quantity = parseFloat(form.quantity);
-  const price = parseFloat(form.price);
-  const weightPerQuantity = parseFloat(form.weightPerQuantityGrams);
-  if (
-    isNaN(quantity) ||
-    quantity <= 0 ||
-    isNaN(price) ||
-    price <= 0 ||
-    isNaN(weightPerQuantity) ||
-    weightPerQuantity <= 0
-  ) {
-    return null;
-  }
-  const totalWeightGrams = quantity * toGrams(weightPerQuantity, form.weightPerQuantityUnit);
-  return totalWeightGrams > 0 ? (price / totalWeightGrams) * 100 : null;
 }
 
 export default function IngredientsPage() {
@@ -95,7 +64,6 @@ export default function IngredientsPage() {
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
-  const addPricePer100g = pricePer100gPreview(addForm);
 
   function mealsUsingIngredient(id: number): string[] {
     return meals
@@ -112,24 +80,21 @@ export default function IngredientsPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setAddError(null);
-    const quantity = parseFloat(addForm.quantity);
-    const price = parseFloat(addForm.price);
-    const weightPerQuantity = parseFloat(addForm.weightPerQuantityGrams);
-    const weightPerQuantityGrams = toGrams(weightPerQuantity, addForm.weightPerQuantityUnit);
+    const pricePerUnit = parseFloat(addForm.pricePerUnit);
+    const stockUnits = addForm.stockUnits ? parseFloat(addForm.stockUnits) : 0;
     if (
       !addForm.name.trim() ||
-      isNaN(quantity) ||
-      quantity <= 0 ||
-      isNaN(price) ||
-      price <= 0 ||
-      isNaN(weightPerQuantity) ||
-      weightPerQuantity <= 0
+      !addForm.unit.trim() ||
+      isNaN(pricePerUnit) ||
+      pricePerUnit < 0 ||
+      isNaN(stockUnits) ||
+      stockUnits < 0
     ) {
-      setAddError('All fields are required. Quantity, price, and weight or volume per quantity must be positive.');
+      setAddError('Name, unit, and a non-negative price per unit are required.');
       return;
     }
     try {
-      await create({ name: addForm.name.trim(), quantity, price, weightPerQuantityGrams });
+      await create({ name: addForm.name.trim(), unit: addForm.unit.trim(), pricePerUnit, stockUnits });
       setAddForm(EMPTY_ADD);
     } catch (err) {
       setAddError(err instanceof Error ? err.message : 'Failed to add ingredient');
@@ -140,28 +105,25 @@ export default function IngredientsPage() {
     e.preventDefault();
     if (!editState) return;
     setEditError(null);
-    const quantity = parseFloat(editState.quantity);
-    const price = parseFloat(editState.price);
-    const weightPerQuantity = parseFloat(editState.weightPerQuantityGrams);
-    const weightPerQuantityGrams = toGrams(weightPerQuantity, editState.weightPerQuantityUnit);
+    const pricePerUnit = parseFloat(editState.pricePerUnit);
+    const stockUnits = parseFloat(editState.stockUnits);
     if (
       !editState.name.trim() ||
-      isNaN(quantity) ||
-      quantity <= 0 ||
-      isNaN(price) ||
-      price <= 0 ||
-      isNaN(weightPerQuantity) ||
-      weightPerQuantity <= 0
+      !editState.unit.trim() ||
+      isNaN(pricePerUnit) ||
+      pricePerUnit < 0 ||
+      isNaN(stockUnits) ||
+      stockUnits < 0
     ) {
-      setEditError('All fields are required. Quantity, price, and weight or volume per quantity must be positive.');
+      setEditError('Name, unit, and a non-negative price per unit are required.');
       return;
     }
     try {
       await update(editState.id, {
         name: editState.name.trim(),
-        quantity,
-        price,
-        weightPerQuantityGrams,
+        unit: editState.unit.trim(),
+        pricePerUnit,
+        stockUnits,
       });
       setEditState(null);
     } catch (err) {
@@ -224,46 +186,29 @@ export default function IngredientsPage() {
           />
           <input
             className={styles.input}
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Quantity bought"
-            value={addForm.quantity}
-            onChange={(e) => setAddForm({ ...addForm, quantity: e.target.value })}
+            type="text"
+            placeholder="Unit (e.g. egg, can, lb, cup)"
+            value={addForm.unit}
+            onChange={(e) => setAddForm({ ...addForm, unit: e.target.value })}
           />
           <input
             className={styles.input}
             type="number"
             step="0.01"
             min="0"
-            placeholder="Total receipt price"
-            value={addForm.price}
-            onChange={(e) => setAddForm({ ...addForm, price: e.target.value })}
+            placeholder="Price per unit"
+            value={addForm.pricePerUnit}
+            onChange={(e) => setAddForm({ ...addForm, pricePerUnit: e.target.value })}
           />
           <input
             className={styles.input}
             type="number"
             step="any"
             min="0"
-            placeholder="Weight/volume per quantity"
-            value={addForm.weightPerQuantityGrams}
-            onChange={(e) => setAddForm({ ...addForm, weightPerQuantityGrams: e.target.value })}
+            placeholder="Quantity in stock"
+            value={addForm.stockUnits}
+            onChange={(e) => setAddForm({ ...addForm, stockUnits: e.target.value })}
           />
-          <select
-            className={styles.select}
-            aria-label="Weight unit"
-            title="ml is treated as grams (1 ml ≈ 1 g, accurate for water-like liquids)"
-            value={addForm.weightPerQuantityUnit}
-            onChange={(e) => setAddForm({ ...addForm, weightPerQuantityUnit: e.target.value as WeightUnit })}
-          >
-            <option value="g">g</option>
-            <option value="lb">lb</option>
-            <option value="oz">oz</option>
-            <option value="ml">ml</option>
-          </select>
-          <span className={styles.pricePreview} aria-live="polite">
-            Price / 100g: {addPricePer100g === null ? '--' : formatCurrency(addPricePer100g)}
-          </span>
           <button className={styles.addBtn} type="submit">Add</button>
         </form>
       </section>
@@ -272,23 +217,22 @@ export default function IngredientsPage() {
         <thead>
           <tr>
             <th>Name</th>
-            <th>Total Weight</th>
+            <th>Unit</th>
             <th>Remaining</th>
-            <th>Total Price</th>
-            <th>Price / 100g</th>
+            <th>Price / Unit</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {displayedItems.length === 0 && (
             <tr>
-              <td colSpan={6} className={styles.empty}>No ingredients needed this week.</td>
+              <td colSpan={5} className={styles.empty}>No ingredients needed this week.</td>
             </tr>
           )}
           {displayedItems.map((ingredient) =>
             editState?.id === ingredient.id ? (
               <tr key={ingredient.id}>
-                <td colSpan={6}>
+                <td colSpan={5}>
                   {editError && <ErrorMessage message={editError} />}
                   <form className={styles.editForm} onSubmit={handleEditSave}>
                     <input
@@ -299,41 +243,29 @@ export default function IngredientsPage() {
                     />
                     <input
                       className={styles.input}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={editState.quantity}
-                      onChange={(e) => setEditState({ ...editState, quantity: e.target.value })}
+                      type="text"
+                      placeholder="Unit"
+                      value={editState.unit}
+                      onChange={(e) => setEditState({ ...editState, unit: e.target.value })}
                     />
                     <input
                       className={styles.input}
                       type="number"
                       step="0.01"
                       min="0"
-                      value={editState.price}
-                      onChange={(e) => setEditState({ ...editState, price: e.target.value })}
+                      placeholder="Price per unit"
+                      value={editState.pricePerUnit}
+                      onChange={(e) => setEditState({ ...editState, pricePerUnit: e.target.value })}
                     />
                     <input
                       className={styles.input}
                       type="number"
                       step="any"
                       min="0"
-                      placeholder="Weight/volume per quantity"
-                      value={editState.weightPerQuantityGrams}
-                      onChange={(e) => setEditState({ ...editState, weightPerQuantityGrams: e.target.value })}
+                      placeholder="Quantity in stock"
+                      value={editState.stockUnits}
+                      onChange={(e) => setEditState({ ...editState, stockUnits: e.target.value })}
                     />
-                    <select
-                      className={styles.select}
-                      aria-label="Weight unit"
-                      title="ml is treated as grams (1 ml ≈ 1 g, accurate for water-like liquids)"
-                      value={editState.weightPerQuantityUnit}
-                      onChange={(e) => setEditState({ ...editState, weightPerQuantityUnit: e.target.value as WeightUnit })}
-                    >
-                      <option value="g">g</option>
-                      <option value="lb">lb</option>
-                      <option value="oz">oz</option>
-                      <option value="ml">ml</option>
-                    </select>
                     <button className={styles.saveBtn} type="submit">Save</button>
                     <button
                       className={styles.cancelBtn}
@@ -348,10 +280,9 @@ export default function IngredientsPage() {
             ) : (
               <tr key={ingredient.id}>
                 <td>{ingredient.name}</td>
-                <td>{formatGrams(ingredient.totalWeightGrams)}</td>
-                <td>{formatGrams(ingredient.stockWeightGrams)}</td>
-                <td>{formatCurrency(ingredient.price)}</td>
-                <td>{formatCurrency(ingredient.pricePerGram * 100)}</td>
+                <td>{ingredient.unit}</td>
+                <td>{formatUnits(ingredient.stockUnits, ingredient.unit)}</td>
+                <td>{formatCurrency(ingredient.pricePerUnit)}</td>
                 <td>
                   <button
                     className={styles.editBtn}
@@ -359,10 +290,9 @@ export default function IngredientsPage() {
                       setEditState({
                         id: ingredient.id,
                         name: ingredient.name,
-                        quantity: String(ingredient.quantity),
-                        price: String(ingredient.price),
-                        weightPerQuantityGrams: String(ingredient.weightPerQuantityGrams),
-                        weightPerQuantityUnit: 'g',
+                        unit: ingredient.unit,
+                        pricePerUnit: String(ingredient.pricePerUnit),
+                        stockUnits: String(ingredient.stockUnits),
                       })
                     }
                   >

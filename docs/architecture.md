@@ -62,10 +62,9 @@ Four models are defined in `backend/prisma/schema.prisma`. All use SQLite with a
 |---|---|---|
 | id | Int | PK, auto-increment |
 | name | String | |
-| quantity | Decimal | Number of purchased units from the receipt |
-| price | Decimal | Total receipt price for the purchased quantity |
-| weightPerQuantityGrams | Decimal | Grams per purchased unit |
-| stockWeightGrams | Decimal | Remaining inventory in grams |
+| unit | String | Natural purchasable unit (e.g. egg, can, lb, cup) |
+| pricePerUnit | Decimal | Price of one unit |
+| stockUnits | Decimal | Remaining inventory in units |
 | createdAt | DateTime | Default: now() |
 
 ### Meal
@@ -82,7 +81,8 @@ Four models are defined in `backend/prisma/schema.prisma`. All use SQLite with a
 |---|---|---|
 | mealId | Int | FK → Meal (cascade delete) |
 | ingredientId | Int | FK → Ingredient (cascade delete) |
-| quantity | Decimal | Grams of the ingredient used |
+| quantity | Decimal | Number of units of the ingredient used |
+| targetUnits | Decimal | Planned units used, for auto-portioning |
 Composite PK: `[mealId, ingredientId]`
 
 ### MealPlan
@@ -120,8 +120,8 @@ All endpoints are mounted under `/api`. Every response uses the envelope shape `
 | Method | Path | Controller | Description |
 |---|---|---|---|
 | GET | /api/ingredients | `getAllIngredients` | Return all ingredients ordered by `createdAt` asc |
-| POST | /api/ingredients | `createIngredient` | Create a new ingredient; body: `{ name, quantity, price, weightPerQuantityGrams }`; sets `stockWeightGrams` to total weight |
-| PUT | /api/ingredients/:id | `updateIngredient` | Partial update; at least one field required; editing purchase fields resets `stockWeightGrams` to recalculated total weight |
+| POST | /api/ingredients | `createIngredient` | Create a new ingredient; body: `{ name, unit, pricePerUnit, stockUnits? }` |
+| PUT | /api/ingredients/:id | `updateIngredient` | Partial update; at least one field required |
 | DELETE | /api/ingredients/:id | `deleteIngredient` | Delete by id; returns `{ id }` |
 
 ### Meals — `/api/meals`
@@ -150,9 +150,9 @@ All mutating endpoints pass through the `validate` middleware factory, which run
 
 ### Cost computation
 
-`backend/utils/cost-calculator.ts` contains two pure functions with no DB access. Ingredient total weight is `quantity × weightPerQuantityGrams`, and price per gram is `price / totalWeightGrams`.
+`backend/utils/cost-calculator.ts` contains two pure functions with no DB access. Each ingredient carries a `pricePerUnit`, and meal usage is measured directly in units.
 
-- `computeMealCost(ingredients)` — sums `grams used × pricePerGram` across all ingredient rows, rounded to 2 decimal places.
+- `computeMealCost(ingredients)` — sums `units used × pricePerUnit` across all ingredient rows, rounded to 2 decimal places.
 - `computePlanCost(items)` — memoizes each meal's base cost by `mealId`, then scales each plan item by `item.servings / meal.servings`. Total is rounded to 2 decimal places.
 
 Both controllers call `attachCost()` before sending the response, so `cost` is a computed field on every meal and plan response — it is not stored in the database.

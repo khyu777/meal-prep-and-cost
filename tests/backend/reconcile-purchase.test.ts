@@ -8,13 +8,13 @@ import {
 function input(overrides: Partial<ReconcileInput> = {}): ReconcileInput {
   return {
     ingredients: [
-      { name: 'Chicken thighs', quantity: 3, unit: 'lbs', weight_per_quantity_grams: 454, price: 13.17 },
-      { name: 'Doenjang', quantity: 1, unit: 'tub (500g)', weight_per_quantity_grams: 500, price: 5.6 },
+      { name: 'Chicken thighs', quantity: 3, unit: 'lb', price_per_unit: 1.99 },
+      { name: 'Doenjang', quantity: 1, unit: 'tub', price_per_unit: 5.6 },
     ],
     meals: [
-      { ingredients: [{ name: 'Chicken thighs', grams: 170 }, { name: 'Doenjang', grams: 30 }] },
-      { ingredients: [{ name: 'Chicken thighs', grams: 113 }] },
-      { ingredients: [{ name: 'Chicken thighs', grams: 170 }, { name: 'Doenjang', grams: 37 }] },
+      { ingredients: [{ name: 'Chicken thighs', units: 0.375 }, { name: 'Doenjang', units: 0.06 }] },
+      { ingredients: [{ name: 'Chicken thighs', units: 0.25 }] },
+      { ingredients: [{ name: 'Chicken thighs', units: 0.375 }, { name: 'Doenjang', units: 0.074 }] },
     ],
     ...overrides,
   };
@@ -24,7 +24,7 @@ describe('reconcilePurchaseQuantities', () => {
   it('clamps an avoidable overbuy down to the minimum unit (chicken 3 → 1 lb)', () => {
     const { ingredients, changes } = reconcilePurchaseQuantities(input());
     const chicken = ingredients.find((i) => i.name === 'Chicken thighs')!;
-    // 170+113+170 = 453g, ceil(453/454) = 1 lb
+    // 0.375+0.25+0.375 = 1.0 lb, ceil(1.0) = 1
     expect(chicken.quantity).toBe(1);
     expect(changes).toContainEqual(
       expect.objectContaining({ name: 'Chicken thighs', fromQuantity: 3, toQuantity: 1 })
@@ -38,12 +38,20 @@ describe('reconcilePurchaseQuantities', () => {
     expect(changes.find((c) => c.name === 'Doenjang')).toBeUndefined();
   });
 
-  it('preserves pricePerGram when clamping quantity', () => {
+  it('preserves price_per_unit unchanged when clamping quantity', () => {
     const before = input().ingredients[0];
-    const beforePpg = before.price / (before.quantity * before.weight_per_quantity_grams);
     const { ingredients } = reconcilePurchaseQuantities(input());
     const chicken = ingredients.find((i) => i.name === 'Chicken thighs')!;
-    const afterPpg = chicken.price / (chicken.quantity * chicken.weight_per_quantity_grams);
-    expect(afterPpg).toBeCloseTo(beforePpg, 5);
+    expect(chicken.price_per_unit).toBe(before.price_per_unit);
+  });
+
+  it('does not inflate a purchase that already equals or exceeds usage', () => {
+    const { ingredients, changes } = reconcilePurchaseQuantities(input({
+      ingredients: [{ name: 'Chicken thighs', quantity: 1, unit: 'lb', price_per_unit: 1.99 }],
+      meals: [{ ingredients: [{ name: 'Chicken thighs', units: 1 }] }],
+    }));
+    const chicken = ingredients.find((i) => i.name === 'Chicken thighs')!;
+    expect(chicken.quantity).toBe(1);
+    expect(changes).toHaveLength(0);
   });
 });

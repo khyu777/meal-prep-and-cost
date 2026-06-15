@@ -45,10 +45,9 @@ function buildApp() {
 const sampleIngredient = {
   id: 1,
   name: 'Chicken Breast',
-  quantity: 2,
-  price: 12,
-  weightPerQuantityGrams: 500,
-  stockWeightGrams: 1000,
+  unit: 'lb',
+  pricePerUnit: 5,
+  stockUnits: 2,
   createdAt: new Date('2024-01-01'),
 };
 
@@ -59,7 +58,7 @@ const sampleMeal = {
   servings: 2,
   createdAt: new Date('2024-01-01'),
   ingredients: [
-    { mealId: 1, ingredientId: 1, quantity: 250, ingredient: sampleIngredient },
+    { mealId: 1, ingredientId: 1, quantity: 0.5, targetUnits: 0.5, ingredient: sampleIngredient },
   ],
 };
 

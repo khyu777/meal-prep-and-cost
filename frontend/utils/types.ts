@@ -2,12 +2,9 @@
 export interface Ingredient {
   id: number;
   name: string;
-  quantity: number;
-  price: number;
-  weightPerQuantityGrams: number;
-  stockWeightGrams: number;
-  totalWeightGrams: number;
-  pricePerGram: number;
+  unit: string;
+  pricePerUnit: number;
+  stockUnits: number;
   createdAt: string;
 }
 
@@ -15,7 +12,7 @@ export interface MealIngredient {
   mealId: number;
   ingredientId: number;
   quantity: number;
-  targetGrams: number;
+  targetUnits: number;
   ingredient: Ingredient;
 }
 

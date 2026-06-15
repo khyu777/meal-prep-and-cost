@@ -108,9 +108,8 @@ When standalone (`/meal-analyzer`), there is no location input → use US averag
       {
         "name": "Canned chickpeas",
         "quantity": 2,
-        "unit": "can (15oz)",
-        "weight_per_quantity_grams": 425,
-        "price": 2.40
+        "unit": "can",
+        "price_per_unit": 1.20
       }
     ],
     "meals": [
@@ -120,7 +119,7 @@ When standalone (`/meal-analyzer`), there is no location input → use US averag
         "day_of_week": 1,
         "servings": 2,
         "ingredients": [
-          { "name": "Canned chickpeas", "grams": 213 }
+          { "name": "Canned chickpeas", "units": 0.5 }
         ]
       }
     ]
@@ -139,8 +138,8 @@ Return JSON only. No preamble, no markdown fences.
 
 ### Meal prep mode (`meal_prep: true`)
 - Scale ingredient quantities to **batch size** — enough to cover all meals that share that ingredient across the week, not per-meal quantities
-- "Batch size" = the **sum of per-meal grams** across every meal that uses the ingredient, then converted to the minimum purchasable unit (see "Buy to match usage" below). It is NOT an eyeballed bulk number — buying "3 lbs chicken" when the meals only use 453g is wrong
-- Example: if chicken thighs appear in 4 meals, quantity = total grams needed for all 4 ÷ unit weight, rounded up — not a round bulk figure
+- "Batch size" = the **sum of per-meal units** across every meal that uses the ingredient, rounded up to the whole purchasable unit (see "Buy to match usage" below). It is NOT an eyeballed bulk number — buying "3 lbs chicken" when the meals only use ~1 lb is wrong
+- Example: if chicken thighs appear in 4 meals, quantity = ceil(total lb needed for all 4) — not a round bulk figure
 - Grocery list still deduplicates and aggregates as normal — batch scaling happens before aggregation
 
 ### Decomposition
@@ -168,12 +167,11 @@ Return JSON only. No preamble, no markdown fences.
 - Default assumption: 2 adults, standard portions
 
 ### Buy to match usage (no overbuying)
-- Set each `quantity` to the **minimum** purchasable unit whose total grams cover the summed
-  usage across all meals — do not exceed it. No bulk padding.
-- Formula: `quantity = ceil(Σ grams used across all meals ÷ weight_per_quantity_grams)`
-  (minimum 1 when the ingredient is used at all).
-- Example — chicken thighs used 170g + 113g + 170g = 453g, sold by the lb (454 g):
-  `ceil(453 ÷ 454) = 1 lb`. Buy **1 lb**, never 3.
+- Set each `quantity` to the **minimum** whole number of purchasable units whose total covers
+  the summed usage across all meals — do not exceed it. No bulk padding.
+- Formula: `quantity = ceil(Σ units used across all meals)` (minimum 1 when the ingredient is used at all).
+- Example — chicken thighs used 0.375 + 0.25 + 0.375 = 1.0 lb, sold by the lb:
+  `ceil(1.0) = 1 lb`. Buy **1 lb**, never 3.
 - Items sold only in large fixed packages (a tub, jar, head, bag) stay at 1 unit even when
   usage is far below the package — that leftover is unavoidable, not an excuse to round to 2.
 
@@ -269,9 +267,8 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
     {
       "name": "Canned chickpeas",
       "quantity": 2,
-      "unit": "can (15oz)",
-      "weight_per_quantity_grams": 425,
-      "price": 2.40
+      "unit": "can",
+      "price_per_unit": 1.20
     }
   ],
   "meals": [
@@ -281,7 +278,7 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
       "day_of_week": 1,
       "servings": 2,
       "ingredients": [
-        { "name": "Canned chickpeas", "grams": 213 }
+        { "name": "Canned chickpeas", "units": 0.5 }
       ]
     }
   ]
@@ -290,44 +287,35 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
 
 `day_of_week` maps brainstormer `day` directly to the integer (Day 1 → 1, Day 2 → 2, …). Use the same value for both lunch and dinner on the same day. 0 = Sunday, 1 = Monday, …, 6 = Saturday.
 
+The tracker is **fully unit-based** — there are no grams. Each ingredient has one
+natural purchasable `unit`, a `price_per_unit`, and meals consume a number of those
+units (fractional is fine). Pick the unit that matches how the recipe measures the
+ingredient — the Unit price reference table above is already per-unit, so the price
+comes straight from it.
+
+### Choosing the `unit`
+- Use the recipe's natural measure as the unit: `lb` (meat), `can` (canned goods),
+  `cup` or `cup dry` (rice/grains), `tbsp` (oils/sauces), `tsp` (spices), `ea`/`whole`
+  (eggs, onions, lemons, pita), `head` (garlic), `block` (tofu), `bag`/`bunch` (greens).
+- One unit per ingredient — the same unit used in both the grocery list and `meals[].ingredients[].units`.
+
 ### Rules for `tracker_upload.ingredients`
-- `price` = the grocery item's `usage_cost` from the grocery list.
-- `weight_per_quantity_grams` = grams in one purchasable unit (e.g. 454 for 1 lb, 425 for one 15oz can).
-- `quantity` = the **minimum purchasable unit** that covers usage:
-  `quantity = ceil(Σ grams across all meals ÷ weight_per_quantity_grams)`, minimum 1 when used.
-  This is a tight equality, not just a floor — do not buy more than this (chicken using 453g → 1 lb, never 3).
-- `quantity` here **must equal** the matching `grocery_list[]` entry's `quantity` — both come from the same Σ grams.
+- `unit` = the natural purchasable unit chosen above.
+- `price_per_unit` = the price of **one** such unit, taken from the Unit price reference
+  table (e.g. chicken thighs $1.99/lb → `1.99`; eggs $0.30/ea → `0.30`; olive oil
+  $0.10/tbsp → `0.10`). Apply the location multiplier if `location` is set.
+- `quantity` = `ceil(Σ units used across all meals)`, minimum 1 when used. This is a
+  tight equality, not bulk padding (chicken using 1.0 lb → 1, never 3).
+- `quantity` here **must equal** the matching `grocery_list[]` entry's `quantity`.
 - Include **all** ingredients that appear in any meal, including staples that appear in `recipe_ingredients`.
 - Name must exactly match the names used in `meals[].ingredients[].name`.
 
-### Rules for `tracker_upload.meals[].ingredients[].grams`
-- Use **per-serving-scaled grams** (one adult, standard portion) — not batch-sized.
-- For meal-prep mode, `recipe_ingredients` are batch-sized for display; the tracker needs per-meal grams so the app cost calculation is correct.
-
-### Gram conversion reference
-| Unit | Approx grams |
-|---|---|
-| 1 can (15oz) | 425 g |
-| 1 cup dry rice | 185 g |
-| 1 cup dry quinoa | 185 g |
-| 1 cup dry pasta | 100 g |
-| 1 tbsp oil / butter | 14 g |
-| 1 tbsp tahini / nut butter | 16 g |
-| 1 tsp spice | 3 g |
-| 1 oz | 28 g |
-| 1 lb | 454 g |
-| 1 egg (large) | 50 g |
-| 1 whole onion (medium) | 110 g |
-| 1 garlic head | 50 g |
-| 1 lemon | 100 g |
-| 1 pita (small) | 60 g |
-| 1 slice bread | 30 g |
-| 1 whole tomato (medium) | 120 g |
-| 1 whole cucumber | 200 g |
-| 1 bunch spinach | 170 g |
-| 1 cup Greek yogurt | 245 g |
-| 1 cup milk | 240 g |
-| 1 oz cheddar | 28 g |
+### Rules for `tracker_upload.meals[].ingredients[].units`
+- `units` = the **per-serving** amount the meal uses, expressed in the ingredient's unit
+  (one adult, standard portion) — not batch-sized. E.g. half a can → `0.5`; 2 eggs → `2`;
+  3/8 lb chicken → `0.375`; 1 tbsp oil where unit is `tbsp` → `1`.
+- For meal-prep mode, `recipe_ingredients` are batch-sized for display; the tracker needs
+  per-meal units so the app cost calculation is correct.
 
 ---
 

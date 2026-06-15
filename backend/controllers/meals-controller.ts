@@ -26,29 +26,33 @@ function attachCost(meal: MealWithIngredients) {
     ingredients: meal.ingredients.map((mealIngredient) => ({
       ...mealIngredient,
       quantity: Number(mealIngredient.quantity),
-      targetGrams: Number(mealIngredient.targetGrams),
+      targetUnits: Number(mealIngredient.targetUnits),
       ingredient: serializeIngredient(mealIngredient.ingredient),
     })),
     cost,
   };
 }
 
-function allocateWholeGramsByTarget<T>(
+// Distributes a pool of units across rows proportional to each row's target,
+// at 0.01-unit precision, using largest-remainder so the parts sum back to the pool.
+function allocateUnitsByTarget<T>(
   rows: T[],
-  wholeGramPool: number,
+  unitPool: number,
   targetFor: (row: T) => number
 ): number[] {
   const totalTarget = rows.reduce((sum, row) => sum + targetFor(row), 0);
-  if (totalTarget <= 0 || wholeGramPool <= 0) {
+  if (totalTarget <= 0 || unitPool <= 0) {
     return rows.map(() => 0);
   }
 
+  // Work in integer hundredths so fractional units allocate cleanly.
+  const poolHundredths = Math.floor(unitPool * 100);
   const allocations = rows.map((row, index) => {
-    const exact = wholeGramPool * (targetFor(row) / totalTarget);
+    const exact = poolHundredths * (targetFor(row) / totalTarget);
     const floor = Math.floor(exact);
     return { index, floor, remainder: exact - floor };
   });
-  let remaining = wholeGramPool - allocations.reduce((sum, row) => sum + row.floor, 0);
+  let remaining = poolHundredths - allocations.reduce((sum, row) => sum + row.floor, 0);
 
   allocations
     .sort((a, b) => b.remainder - a.remainder || a.index - b.index)
@@ -61,7 +65,7 @@ function allocateWholeGramsByTarget<T>(
 
   return allocations
     .sort((a, b) => a.index - b.index)
-    .map((row) => row.floor);
+    .map((row) => row.floor / 100);
 }
 
 export async function getAllMeals(
@@ -115,23 +119,23 @@ export async function createMeal(
       req.body as z.infer<typeof createMealSchema>;
 
     const meal = await prisma.$transaction(async (tx) => {
-        // Validate and deduct gram stock for each ingredient
+        // Validate and deduct unit stock for each ingredient
         for (const mi of ingredients) {
           const ing = await tx.ingredient.findUnique({ where: { id: mi.ingredientId } });
           if (!ing) {
             throw Object.assign(new Error(`Ingredient ${mi.ingredientId} not found`), { statusCode: 400 });
           }
         if (mi.quantity > 0) {
-          const available = Number(ing.stockWeightGrams);
+          const available = Number(ing.stockUnits);
           if (available < mi.quantity) {
             throw Object.assign(
-              new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity}g, have ${available}g`),
+              new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity} ${ing.unit}, have ${available} ${ing.unit}`),
               { statusCode: 422 }
             );
           }
           await tx.ingredient.update({
             where: { id: mi.ingredientId },
-            data: { stockWeightGrams: { decrement: mi.quantity } },
+            data: { stockUnits: { decrement: mi.quantity } },
           });
         }
       }
@@ -145,7 +149,7 @@ export async function createMeal(
             create: ingredients.map((mi) => ({
               ingredientId: mi.ingredientId,
               quantity: mi.quantity,
-              targetGrams: mi.targetGrams ?? mi.quantity,
+              targetUnits: mi.targetUnits ?? mi.quantity,
             })),
           },
         },
@@ -192,32 +196,32 @@ export async function updateMeal(
         }
       }
       if (ingredients !== undefined) {
-        // Restore gram stock from old ingredient quantities before deducting new ones
+        // Restore unit stock from old ingredient quantities before deducting new ones
         const oldIngredients = await tx.mealIngredient.findMany({ where: { mealId: id } });
         for (const old of oldIngredients) {
           await tx.ingredient.update({
             where: { id: old.ingredientId },
-            data: { stockWeightGrams: { increment: Number(old.quantity) } },
+            data: { stockUnits: { increment: Number(old.quantity) } },
           });
         }
 
-        // Validate and deduct gram stock for new quantities
+        // Validate and deduct unit stock for new quantities
         for (const mi of ingredients) {
           const ing = await tx.ingredient.findUnique({ where: { id: mi.ingredientId } });
           if (!ing) {
             throw Object.assign(new Error(`Ingredient ${mi.ingredientId} not found`), { statusCode: 400 });
           }
           if (mi.quantity > 0) {
-            const available = Number(ing.stockWeightGrams);
+            const available = Number(ing.stockUnits);
             if (available < mi.quantity) {
               throw Object.assign(
-                new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity}g, have ${available}g`),
+                new Error(`Insufficient stock for "${ing.name}": need ${mi.quantity} ${ing.unit}, have ${available} ${ing.unit}`),
                 { statusCode: 422 }
               );
             }
             await tx.ingredient.update({
               where: { id: mi.ingredientId },
-              data: { stockWeightGrams: { decrement: mi.quantity } },
+              data: { stockUnits: { decrement: mi.quantity } },
             });
           }
         }
@@ -228,7 +232,7 @@ export async function updateMeal(
             mealId: id,
             ingredientId: mi.ingredientId,
             quantity: mi.quantity,
-            targetGrams: mi.targetGrams ?? mi.quantity,
+            targetUnits: mi.targetUnits ?? mi.quantity,
           })),
         });
       }
@@ -265,7 +269,7 @@ export async function deleteMeal(
       for (const mi of ingredients) {
         await tx.ingredient.update({
           where: { id: mi.ingredientId },
-          data: { stockWeightGrams: { increment: Number(mi.quantity) } },
+          data: { stockUnits: { increment: Number(mi.quantity) } },
         });
       }
       await tx.meal.delete({ where: { id } });
@@ -302,16 +306,15 @@ export async function autoPortion(
       for (const [ingredientId, miRows] of byIngredient) {
         const ing = miRows[0].ingredient;
         const currentSelectedQuantity = miRows.reduce((sum, row) => sum + Number(row.quantity), 0);
-        const available = Math.max(0, Number(ing.stockWeightGrams) + currentSelectedQuantity);
-        const wholeGramPool = Math.floor(available);
+        const available = Math.max(0, Number(ing.stockUnits) + currentSelectedQuantity);
 
-        const totalTarget = miRows.reduce((s, r) => s + Number(r.targetGrams), 0);
+        const totalTarget = miRows.reduce((s, r) => s + Number(r.targetUnits), 0);
         if (totalTarget <= 0) continue;
 
-        const allocations = allocateWholeGramsByTarget(
+        const allocations = allocateUnitsByTarget(
           miRows,
-          wholeGramPool,
-          (row) => Number(row.targetGrams)
+          available,
+          (row) => Number(row.targetUnits)
         );
         const newQtys: { mealId: number; qty: number }[] = miRows.map((row, index) => ({
           mealId: row.mealId,
@@ -329,7 +332,7 @@ export async function autoPortion(
         const allocated = newQtys.reduce((s, r) => s + r.qty, 0);
         await tx.ingredient.update({
           where: { id: ingredientId },
-          data: { stockWeightGrams: available - allocated },
+          data: { stockUnits: Math.max(0, available - allocated) },
         });
       }
 

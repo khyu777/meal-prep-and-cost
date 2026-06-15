@@ -6,7 +6,7 @@ import { usePlans } from '../hooks/use-plans';
 import { useWeek } from '../hooks/use-week';
 import { planOverlapsWeek } from '../utils/week';
 import { formatCurrency } from '../utils/format-currency';
-import { formatGrams } from '../utils/format-grams';
+import { formatUnits } from '../utils/format-units';
 import LoadingSpinner from '../components/loading-spinner';
 import ErrorMessage from '../components/error-message';
 import ConfirmDialog from '../components/confirm-dialog';
@@ -17,7 +17,6 @@ interface IngredientRow {
   _key: number;
   ingredientId: string;
   quantity: string;
-  quantityUnit: QuantityUnit;
 }
 
 interface MealFormState {
@@ -31,12 +30,8 @@ const EMPTY_FORM: MealFormState = {
   name: '',
   description: '',
   servings: '1',
-  ingredients: [{ _key: 0, ingredientId: '', quantity: '', quantityUnit: 'g' }],
+  ingredients: [{ _key: 0, ingredientId: '', quantity: '' }],
 };
-
-type QuantityUnit = 'g' | 'cup';
-
-const GRAMS_PER_CUP = 236.5882365;
 
 function emptyFormFromMeal(meal: MealWithCost): MealFormState {
   return {
@@ -47,28 +42,17 @@ function emptyFormFromMeal(meal: MealWithCost): MealFormState {
       _key: i,
       ingredientId: String(mi.ingredientId),
       quantity: String(mi.quantity),
-      quantityUnit: 'g',
     })),
   };
 }
 
-function toGrams(value: number, unit: QuantityUnit): number {
-  return unit === 'cup' ? Math.floor(value * GRAMS_PER_CUP) : value;
+function formatQuickFillAmount(value: number): string {
+  return String(Math.floor(value * 100) / 100);
 }
 
-function fromGrams(value: number, unit: QuantityUnit): number {
-  return unit === 'cup' ? value / GRAMS_PER_CUP : value;
-}
-
-function formatQuickFillAmount(value: number, unit: QuantityUnit): string {
-  if (unit === 'g') return String(Math.floor(value));
-  const roundedDown = Math.floor(value * 1000) / 1000;
-  return String(roundedDown);
-}
-
-function pricePer100g(ingredient: MealWithCost['ingredients'][number]['ingredient']): number | null {
-  const direct = Number(ingredient.pricePerGram);
-  return Number.isFinite(direct) ? direct * 100 : null;
+function pricePerUnit(ingredient: MealWithCost['ingredients'][number]['ingredient']): number | null {
+  const direct = Number(ingredient.pricePerUnit);
+  return Number.isFinite(direct) ? direct : null;
 }
 
 export default function MealsPage() {
@@ -108,20 +92,20 @@ export default function MealsPage() {
     return ingredients.filter(
       (ing) =>
         !usedIds.has(String(ing.id)) &&
-        (ing.stockWeightGrams > 0 || String(ing.id) === currentIngredientId)
+        (ing.stockUnits > 0 || String(ing.id) === currentIngredientId)
     );
   }
 
-  function existingMealGrams(ingredientId: number): number {
+  function existingMealUnits(ingredientId: number): number {
     if (!editingId) return 0;
     const meal = meals.find((m) => m.id === editingId);
     const existing = meal?.ingredients.find((mi) => mi.ingredientId === ingredientId);
     return existing ? Number(existing.quantity) : 0;
   }
 
-  function availableGramsForMeal(ingredientId: number): number {
+  function availableUnitsForMeal(ingredientId: number): number {
     const ingredient = ingredients.find((ing) => ing.id === ingredientId);
-    return (ingredient?.stockWeightGrams ?? 0) + existingMealGrams(ingredientId);
+    return (ingredient?.stockUnits ?? 0) + existingMealUnits(ingredientId);
   }
 
   function openCreate() {
@@ -165,7 +149,7 @@ export default function MealsPage() {
 
   function sortedMealIngredients(meal: MealWithCost) {
     return [...meal.ingredients].sort(
-      (a, b) => (pricePer100g(b.ingredient) ?? -1) - (pricePer100g(a.ingredient) ?? -1)
+      (a, b) => (pricePerUnit(b.ingredient) ?? -1) - (pricePerUnit(a.ingredient) ?? -1)
     );
   }
 
@@ -181,15 +165,15 @@ export default function MealsPage() {
     const row = formState.ingredients[index];
     const ingredientId = Number(row.ingredientId);
     if (!ingredientId) return;
-    const amount = fromGrams(availableGramsForMeal(ingredientId) * fraction, row.quantityUnit);
-    updateIngredientRow(index, 'quantity', formatQuickFillAmount(amount, row.quantityUnit));
+    const amount = availableUnitsForMeal(ingredientId) * fraction;
+    updateIngredientRow(index, 'quantity', formatQuickFillAmount(amount));
   }
 
   function addIngredientRow() {
       const key = nextKeyRef.current++;
       setFormState((prev) => ({
       ...prev,
-      ingredients: [...prev.ingredients, { _key: key, ingredientId: '', quantity: '', quantityUnit: 'g' }],
+      ingredients: [...prev.ingredients, { _key: key, ingredientId: '', quantity: '' }],
     }));
   }
 
@@ -215,7 +199,7 @@ export default function MealsPage() {
     );
     const parsedIngredients = validIngredients.map((row) => ({
       ingredientId: Number(row.ingredientId),
-      quantity: toGrams(parseFloat(row.quantity), row.quantityUnit),
+      quantity: parseFloat(row.quantity),
     }));
 
     if (parsedIngredients.some((r) => isNaN(r.quantity) || r.quantity < 0)) {
@@ -230,12 +214,12 @@ export default function MealsPage() {
     }
 
     const overdrawn = parsedIngredients.find(
-      (row) => row.quantity > availableGramsForMeal(row.ingredientId)
+      (row) => row.quantity > availableUnitsForMeal(row.ingredientId)
     );
     if (overdrawn) {
       const ingredient = ingredients.find((ing) => ing.id === overdrawn.ingredientId);
       setFormError(
-        `${ingredient?.name ?? 'Ingredient'} only has ${formatGrams(availableGramsForMeal(overdrawn.ingredientId))} available.`
+        `${ingredient?.name ?? 'Ingredient'} only has ${formatUnits(availableUnitsForMeal(overdrawn.ingredientId), ingredient?.unit ?? 'unit')} available.`
       );
       return;
     }
@@ -417,8 +401,7 @@ export default function MealsPage() {
                     .map((r) => r.ingredientId)
                 );
                 const selectedId = Number(row.ingredientId);
-                const maxGrams = row.ingredientId ? availableGramsForMeal(selectedId) : undefined;
-                const maxAmount = maxGrams === undefined ? undefined : fromGrams(maxGrams, row.quantityUnit);
+                const maxAmount = row.ingredientId ? availableUnitsForMeal(selectedId) : undefined;
                 const selectedIngredient = ingredients.find((ing) => ing.id === selectedId);
                 return (
                 <div key={row._key} className={styles.ingredientRow}>
@@ -435,7 +418,7 @@ export default function MealsPage() {
                     {selectableIngredients(row.ingredientId, usedIds)
                       .map((ing) => (
                       <option key={ing.id} value={ing.id}>
-                        {ing.name} ({formatGrams(ing.stockWeightGrams)} remaining)
+                        {ing.name} ({formatUnits(ing.stockUnits, ing.unit)} remaining)
                       </option>
                     ))}
                   </select>
@@ -452,20 +435,9 @@ export default function MealsPage() {
                       updateIngredientRow(idx, 'quantity', e.target.value);
                     }}
                   />
-                  <select
-                    className={styles.unitSelect}
-                    aria-label="Amount unit"
-                    value={row.quantityUnit}
-                    onChange={(e) => {
-                      const idx = formState.ingredients.indexOf(row);
-                      updateIngredientRow(idx, 'quantityUnit', e.target.value as QuantityUnit);
-                    }}
-                  >
-                    <option value="g">g</option>
-                    <option value="cup">cups</option>
-                  </select>
+                  <span className={styles.unitLabel}>{selectedIngredient?.unit ?? ''}</span>
                   <span className={styles.pricePreview}>
-                    Price / 100g: {selectedIngredient ? formatCurrency(selectedIngredient.pricePerGram * 100) : '--'}
+                    {selectedIngredient ? `${formatCurrency(selectedIngredient.pricePerUnit)} / ${selectedIngredient.unit}` : '--'}
                   </span>
                   <div className={styles.quickFillGroup} aria-label="Use remaining amount">
                     <button
@@ -578,15 +550,15 @@ export default function MealsPage() {
                       ) : (
                         <div className={styles.ingredientDetailList}>
                           {sortedIngredients.map((item) => {
-                            const price = pricePer100g(item.ingredient);
+                            const price = pricePerUnit(item.ingredient);
                             return (
                               <div key={item.ingredientId} className={styles.ingredientDetailItem}>
                                 <span className={styles.ingredientDetailName}>{item.ingredient.name}</span>
                                 <span className={styles.ingredientDetailMeta}>
-                                  {formatGrams(Number(item.quantity))} used
+                                  {formatUnits(Number(item.quantity), item.ingredient.unit)} used
                                 </span>
                                 <span className={styles.ingredientDetailMeta}>
-                                  {price === null ? '--' : formatCurrency(price)} / 100g
+                                  {price === null ? '--' : `${formatCurrency(price)} / ${item.ingredient.unit}`}
                                 </span>
                               </div>
                             );

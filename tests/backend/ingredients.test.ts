@@ -18,7 +18,6 @@ jest.mock('../../backend/models/prisma-client', () => {
     __esModule: true,
     default: {
       ingredient,
-      // $transaction executes the callback with the same shared mock objects
       $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) =>
         fn({ ingredient })
       ),
@@ -41,10 +40,9 @@ function buildApp() {
 const sampleIngredient = {
   id: 1,
   name: 'Chicken Breast',
-  quantity: 2,
-  price: 12,
-  weightPerQuantityGrams: 500,
-  stockWeightGrams: 1000,
+  unit: 'lb',
+  pricePerUnit: 1.99,
+  stockUnits: 2,
   createdAt: new Date('2024-01-01'),
 };
 
@@ -61,7 +59,7 @@ describe('Ingredients API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
-        data: [{ name: 'Chicken Breast', totalWeightGrams: 1000, pricePerGram: 0.012 }],
+        data: [{ name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99, stockUnits: 2 }],
         error: null,
         status: 200,
       });
@@ -74,22 +72,30 @@ describe('Ingredients API', () => {
 
       const res = await request(buildApp())
         .post('/api/ingredients')
-        .send({ name: 'Chicken Breast', quantity: 2, price: 12, weightPerQuantityGrams: 500 });
+        .send({ name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99, stockUnits: 2 });
 
       expect(res.status).toBe(201);
       expect(mockPrisma.ingredient.create).toHaveBeenCalledWith({
-        data: {
-          name: 'Chicken Breast',
-          quantity: 2,
-          price: 12,
-          weightPerQuantityGrams: 500,
-          stockWeightGrams: 1000,
-        },
+        data: { name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99, stockUnits: 2 },
       });
       expect(res.body).toMatchObject({
-        data: { name: 'Chicken Breast', stockWeightGrams: 1000, pricePerGram: 0.012 },
+        data: { name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99, stockUnits: 2 },
         error: null,
         status: 201,
+      });
+    });
+
+    it('defaults stockUnits to 0 when omitted', async () => {
+      const noStock = { ...sampleIngredient, stockUnits: 0 };
+      (mockPrisma.ingredient.create as jest.Mock).mockResolvedValue(noStock);
+
+      const res = await request(buildApp())
+        .post('/api/ingredients')
+        .send({ name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99 });
+
+      expect(res.status).toBe(201);
+      expect(mockPrisma.ingredient.create).toHaveBeenCalledWith({
+        data: { name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99, stockUnits: 0 },
       });
     });
 
@@ -103,155 +109,52 @@ describe('Ingredients API', () => {
       expect(res.body.status).toBe(400);
     });
 
-    it('returns 400 when price is not positive', async () => {
+    it('returns 400 when pricePerUnit is negative', async () => {
       const res = await request(buildApp())
         .post('/api/ingredients')
-        .send({ name: 'Chicken Breast', quantity: 2, price: -1, weightPerQuantityGrams: 500 });
+        .send({ name: 'Chicken Breast', unit: 'lb', pricePerUnit: -1 });
 
       expect(res.status).toBe(400);
       expect(res.body.data).toBeNull();
       expect(res.body.status).toBe(400);
     });
 
-    it('allows zero weightPerQuantityGrams for placeholder ingredients', async () => {
-      const placeholder = {
-        ...sampleIngredient,
-        quantity: 0,
-        price: 0,
-        weightPerQuantityGrams: 0,
-        stockWeightGrams: 0,
-      };
-      (mockPrisma.ingredient.create as jest.Mock).mockResolvedValue(placeholder);
-
+    it('returns 400 when unknown fields are submitted (strict schema)', async () => {
       const res = await request(buildApp())
         .post('/api/ingredients')
-        .send({ name: 'Chicken Breast', quantity: 0, price: 0, weightPerQuantityGrams: 0 });
-
-      expect(res.status).toBe(201);
-      expect(mockPrisma.ingredient.create).toHaveBeenCalledWith({
-        data: {
-          name: 'Chicken Breast',
-          quantity: 0,
-          price: 0,
-          weightPerQuantityGrams: 0,
-          stockWeightGrams: 0,
-        },
-      });
-    });
-
-    it('returns 400 when pricePerGram is submitted instead of calculated', async () => {
-      const res = await request(buildApp())
-        .post('/api/ingredients')
-        .send({
-          name: 'Chicken Breast',
-          quantity: 2,
-          price: 12,
-          weightPerQuantityGrams: 500,
-          pricePerGram: 0.012,
-        });
+        .send({ name: 'Chicken Breast', unit: 'lb', pricePerUnit: 1.99, unknownField: 'bad' });
 
       expect(res.status).toBe(400);
       expect(res.body.data).toBeNull();
-      expect(res.body.status).toBe(400);
       expect(mockPrisma.ingredient.create).not.toHaveBeenCalled();
     });
   });
 
   describe('PUT /api/ingredients/:id', () => {
     it('updates an existing ingredient and returns the updated record', async () => {
-      const updated = { ...sampleIngredient, name: 'Updated Chicken' };
-      (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(sampleIngredient);
+      const updated = { ...sampleIngredient, name: 'Updated Chicken', stockUnits: 3 };
       (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(updated);
 
       const res = await request(buildApp())
         .put('/api/ingredients/1')
-        .send({ name: 'Updated Chicken', quantity: 3 });
+        .send({ name: 'Updated Chicken', stockUnits: 3 });
 
       expect(res.status).toBe(200);
       expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { name: 'Updated Chicken', quantity: 3, stockWeightGrams: 1500 },
+        data: { name: 'Updated Chicken', stockUnits: 3 },
       });
       expect(res.body).toMatchObject({
-        data: { name: 'Updated Chicken' },
+        data: { name: 'Updated Chicken', stockUnits: 3 },
         error: null,
         status: 200,
       });
     });
 
-    it('sets stock to 0 when purchase fields are zeroed without preserveStockOnZero', async () => {
-      const current = { ...sampleIngredient, stockWeightGrams: 125 };
-      const updated = { ...current, quantity: 0, price: 0, weightPerQuantityGrams: 0, stockWeightGrams: 0 };
-      (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(current);
-      (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(updated);
-
+    it('returns 400 when no fields are provided', async () => {
       const res = await request(buildApp())
         .put('/api/ingredients/1')
-        .send({ quantity: 0, price: 0, weightPerQuantityGrams: 0 });
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { quantity: 0, price: 0, weightPerQuantityGrams: 0, stockWeightGrams: 0 },
-      });
-    });
-
-    it('preserves stock when purchase fields are zeroed with preserveStockOnZero', async () => {
-      const current = { ...sampleIngredient, stockWeightGrams: 125 };
-      const updated = { ...current, quantity: 0, price: 0, weightPerQuantityGrams: 0 };
-      (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(current);
-      (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(updated);
-
-      const res = await request(buildApp())
-        .put('/api/ingredients/1')
-        .send({ quantity: 0, price: 0, weightPerQuantityGrams: 0, preserveStockOnZero: true });
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { quantity: 0, price: 0, weightPerQuantityGrams: 0 },
-      });
-    });
-
-    it('adds newly entered purchase grams on top of preserved leftover stock', async () => {
-      const current = { ...sampleIngredient, quantity: 0, weightPerQuantityGrams: 0, stockWeightGrams: 125 };
-      const updated = { ...current, quantity: 2, price: 12, weightPerQuantityGrams: 500, stockWeightGrams: 1125 };
-      (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(current);
-      (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(updated);
-
-      const res = await request(buildApp())
-        .put('/api/ingredients/1')
-        .send({ quantity: 2, price: 12, weightPerQuantityGrams: 500 });
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { quantity: 2, price: 12, weightPerQuantityGrams: 500, stockWeightGrams: 1125 },
-      });
-    });
-
-    it('clamps stock at zero when shrinking a purchase below already-consumed grams', async () => {
-      // 1000g bought, only 100g left in stock (900g consumed by meals)
-      const current = { ...sampleIngredient, stockWeightGrams: 100 };
-      const updated = { ...current, quantity: 1, stockWeightGrams: 0 };
-      (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue(current);
-      (mockPrisma.ingredient.update as jest.Mock).mockResolvedValue(updated);
-
-      const res = await request(buildApp())
-        .put('/api/ingredients/1')
-        .send({ quantity: 1 });
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { quantity: 1, stockWeightGrams: 0 },
-      });
-    });
-
-    it('returns 400 when only preserveStockOnZero is provided', async () => {
-      const res = await request(buildApp())
-        .put('/api/ingredients/1')
-        .send({ preserveStockOnZero: true });
+        .send({});
 
       expect(res.status).toBe(400);
       expect(res.body.data).toBeNull();

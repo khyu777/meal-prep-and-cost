@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import IngredientsPage from '../../frontend/pages/ingredients-page';
 
-// Mock the hook and utility modules
 vi.mock('../../frontend/hooks/use-ingredients');
 vi.mock('../../frontend/hooks/use-meals');
 vi.mock('../../frontend/hooks/use-plans');
@@ -27,34 +26,25 @@ const sampleItems = [
   {
     id: 1,
     name: 'Chicken Breast',
-    quantity: 2,
-    price: 12,
-    weightPerQuantityGrams: 500,
-    stockWeightGrams: 1000,
-    totalWeightGrams: 1000,
-    pricePerGram: 0.012,
+    unit: 'lb',
+    pricePerUnit: 1.99,
+    stockUnits: 2,
     createdAt: '2024-01-01T00:00:00.000Z',
   },
   {
     id: 2,
     name: 'Rice',
-    quantity: 1,
-    price: 8,
-    weightPerQuantityGrams: 2000,
-    stockWeightGrams: 2000,
-    totalWeightGrams: 2000,
-    pricePerGram: 0.004,
+    unit: 'cup',
+    pricePerUnit: 0.15,
+    stockUnits: 4,
     createdAt: '2024-01-02T00:00:00.000Z',
   },
   {
     id: 3,
     name: 'Broccoli',
-    quantity: 1,
-    price: 4,
-    weightPerQuantityGrams: 453.59237,
-    stockWeightGrams: 453.59237,
-    totalWeightGrams: 453.59237,
-    pricePerGram: 0.0088,
+    unit: 'bunch',
+    pricePerUnit: 1.5,
+    stockUnits: 1,
     createdAt: '2026-06-03T12:00:00.000Z',
   },
 ];
@@ -67,10 +57,10 @@ const sampleMeals = [
     servings: 2,
     createdAt: '2024-01-01T00:00:00.000Z',
     ingredients: [
-      { mealId: 1, ingredientId: 1, quantity: 250, ingredient: sampleItems[0] },
-      { mealId: 1, ingredientId: 2, quantity: 200, ingredient: sampleItems[1] },
+      { mealId: 1, ingredientId: 1, quantity: 0.5, targetUnits: 0.5, ingredient: sampleItems[0] },
+      { mealId: 1, ingredientId: 2, quantity: 1, targetUnits: 1, ingredient: sampleItems[1] },
     ],
-    cost: 3,
+    cost: 1.15,
   },
 ];
 
@@ -87,11 +77,11 @@ const samplePlans = [
         mealId: 1,
         dayOfWeek: 1,
         servings: 2,
-        snapshotCostPerServing: 1.5,
+        snapshotCostPerServing: 0.575,
         meal: sampleMeals[0],
       },
     ],
-    cost: 3,
+    cost: 1.15,
   },
 ];
 
@@ -132,69 +122,50 @@ describe('IngredientsPage', () => {
     expect(screen.getByText('Chicken Breast')).toBeInTheDocument();
     expect(screen.getByText('Rice')).toBeInTheDocument();
     expect(screen.getByText('Broccoli')).toBeInTheDocument();
-    expect(screen.getByText('Price / 100g')).toBeInTheDocument();
-    expect(screen.getAllByText('1000g')).toHaveLength(2);
-    expect(screen.getAllByText('2000g')).toHaveLength(2);
-    expect(screen.getAllByText('453g')).toHaveLength(2);
-    expect(screen.getByText('$12.00')).toBeInTheDocument();
-    expect(screen.getByText('$1.20')).toBeInTheDocument();
-    expect(screen.getByText('$0.40')).toBeInTheDocument();
+    expect(screen.getByText('Price / Unit')).toBeInTheDocument();
+    // Unit column values
+    expect(screen.getByText('lb')).toBeInTheDocument();
+    expect(screen.getByText('cup')).toBeInTheDocument();
+    // Stock values
+    expect(screen.getByText('2 lb')).toBeInTheDocument();
+    expect(screen.getByText('4 cup')).toBeInTheDocument();
+    // Price per unit
+    expect(screen.getByText('$1.99')).toBeInTheDocument();
+    expect(screen.getByText('$0.15')).toBeInTheDocument();
   });
 
   it('adds a new ingredient via the inline form', async () => {
     mockCreate.mockResolvedValue(undefined);
     render(<IngredientsPage />);
 
-    expect(screen.getByText(/price \/ 100g: --/i)).toBeInTheDocument();
-    await userEvent.type(screen.getByPlaceholderText('Name'), 'Broccoli');
-    await userEvent.type(screen.getByPlaceholderText(/quantity bought/i), '3');
-    await userEvent.type(screen.getByPlaceholderText(/total receipt price/i), '6.50');
-    await userEvent.type(screen.getByPlaceholderText(/weight\/volume per quantity/i), '0.425');
-    await userEvent.selectOptions(screen.getByLabelText(/weight unit/i), 'lb');
-
-    expect(screen.getByText(/price \/ 100g: \$1.12/i)).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText('Name'), 'Eggs');
+    await userEvent.type(screen.getByPlaceholderText(/unit.*e\.g\./i), 'ea');
+    await userEvent.type(screen.getByPlaceholderText(/price per unit/i), '0.30');
+    await userEvent.type(screen.getByPlaceholderText(/quantity in stock/i), '12');
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
     expect(mockCreate).toHaveBeenCalledWith({
-      name: 'Broccoli',
-      quantity: 3,
-      price: 6.5,
-      weightPerQuantityGrams: 192.77675725,
+      name: 'Eggs',
+      unit: 'ea',
+      pricePerUnit: 0.30,
+      stockUnits: 12,
     });
   });
 
-  it('converts ounces and milliliters to grams before adding an ingredient', async () => {
+  it('defaults stockUnits to 0 when quantity field is left empty', async () => {
     mockCreate.mockResolvedValue(undefined);
-    const { rerender } = render(<IngredientsPage />);
+    render(<IngredientsPage />);
 
-    await userEvent.type(screen.getByPlaceholderText('Name'), 'Cheese');
-    await userEvent.type(screen.getByPlaceholderText(/quantity bought/i), '1');
-    await userEvent.type(screen.getByPlaceholderText(/total receipt price/i), '4');
-    await userEvent.type(screen.getByPlaceholderText(/weight\/volume per quantity/i), '8');
-    await userEvent.selectOptions(screen.getByLabelText(/weight unit/i), 'oz');
+    await userEvent.type(screen.getByPlaceholderText('Name'), 'Salt');
+    await userEvent.type(screen.getByPlaceholderText(/unit.*e\.g\./i), 'tsp');
+    await userEvent.type(screen.getByPlaceholderText(/price per unit/i), '0.01');
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
-    expect(mockCreate).toHaveBeenLastCalledWith({
-      name: 'Cheese',
-      quantity: 1,
-      price: 4,
-      weightPerQuantityGrams: 226.796185,
-    });
-
-    rerender(<IngredientsPage />);
-
-    await userEvent.type(screen.getByPlaceholderText('Name'), 'Milk');
-    await userEvent.type(screen.getByPlaceholderText(/quantity bought/i), '1');
-    await userEvent.type(screen.getByPlaceholderText(/total receipt price/i), '3');
-    await userEvent.type(screen.getByPlaceholderText(/weight\/volume per quantity/i), '500');
-    await userEvent.selectOptions(screen.getByLabelText(/weight unit/i), 'ml');
-    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
-
-    expect(mockCreate).toHaveBeenLastCalledWith({
-      name: 'Milk',
-      quantity: 1,
-      price: 3,
-      weightPerQuantityGrams: 500,
+    expect(mockCreate).toHaveBeenCalledWith({
+      name: 'Salt',
+      unit: 'tsp',
+      pricePerUnit: 0.01,
+      stockUnits: 0,
     });
   });
 
@@ -205,7 +176,6 @@ describe('IngredientsPage', () => {
     const editButtons = screen.getAllByRole('button', { name: /edit/i });
     await userEvent.click(editButtons[0]);
 
-    // Edit form should appear — clear name and type new value
     const nameInputs = screen.getAllByDisplayValue('Chicken Breast');
     await userEvent.clear(nameInputs[0]);
     await userEvent.type(nameInputs[0], 'Chicken Thigh');
@@ -213,9 +183,9 @@ describe('IngredientsPage', () => {
 
     expect(mockUpdate).toHaveBeenCalledWith(1, expect.objectContaining({
       name: 'Chicken Thigh',
-      quantity: 2,
-      price: 12,
-      weightPerQuantityGrams: 500,
+      unit: 'lb',
+      pricePerUnit: 1.99,
+      stockUnits: 2,
     }));
   });
 
@@ -226,7 +196,6 @@ describe('IngredientsPage', () => {
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
     await userEvent.click(deleteButtons[0]);
 
-    // ConfirmDialog should appear — click confirm
     const confirmBtn = screen.getByRole('button', { name: /confirm|yes|ok/i });
     await userEvent.click(confirmBtn);
 

@@ -10,13 +10,12 @@ interface UploadIngredient {
   name: string;
   quantity: number;
   unit: string;
-  weight_per_quantity_grams: number;
-  price: number;
+  price_per_unit: number;
 }
 
 interface UploadMealIngredient {
   name: string;
-  grams: number;
+  units: number;
 }
 
 interface UploadMeal {
@@ -39,10 +38,9 @@ interface TrackerUploadFile {
 interface ApiIngredient {
   id: number;
   name: string;
-  quantity: number;
-  price: number;
-  weightPerQuantityGrams: number;
-  stockWeightGrams: number;
+  unit: string;
+  pricePerUnit: number;
+  stockUnits: number;
 }
 
 const API_BASE = process.env.API_BASE ?? 'http://localhost:3002';
@@ -115,7 +113,7 @@ async function main() {
     upload.ingredients = reconciled;
     console.log('Reconciled over-bought quantities (purchase now matches usage):');
     for (const c of changes) {
-      console.log(`  ~ ${c.name}: ${c.fromQuantity} → ${c.toQuantity} ${c.unit} (uses ${c.usageGrams}g)`);
+      console.log(`  ~ ${c.name}: ${c.fromQuantity} → ${c.toQuantity} ${c.unit} (uses ${c.usageUnits} ${c.unit})`);
     }
     const rewritten = raw.tracker_upload ? { ...raw, tracker_upload: upload } : upload;
     fs.writeFileSync(inputPath, JSON.stringify(rewritten, null, 2) + '\n');
@@ -143,27 +141,24 @@ async function main() {
 
     if (nameToId.has(key)) {
       const id = nameToId.get(key)!;
-      const existing = existingIngredients.find(i => i.id === id)!;
+      // Refresh unit + price estimate; stock is left untouched (omitted from the update).
       await apiFetch<ApiIngredient>(`/api/ingredients/${id}`, {
         method: 'PUT',
         body: JSON.stringify({
-          name: existing.name,
-          quantity: 0,
-          price: 0,
-          weightPerQuantityGrams: 0,
-          preserveStockOnZero: true,
+          unit: ing.unit,
+          pricePerUnit: ing.price_per_unit,
         }),
       });
       reused++;
-      console.log(`  ✓ Reused "${ing.name}" (purchase fields reset, stock preserved)`);
+      console.log(`  ✓ Reused "${ing.name}" (unit/price refreshed, stock preserved)`);
     } else {
       const result = await apiFetch<ApiIngredient>('/api/ingredients', {
         method: 'POST',
         body: JSON.stringify({
           name: ing.name,
-          quantity: 0,
-          price: 0,
-          weightPerQuantityGrams: 0,
+          unit: ing.unit,
+          pricePerUnit: ing.price_per_unit,
+          stockUnits: 0,
         }),
       });
       nameToId.set(key, result.id);
@@ -182,7 +177,7 @@ async function main() {
     const ingredients = meal.ingredients.map(mi => {
       const id = nameToId.get(mi.name.toLowerCase());
       if (!id) throw new Error(`No id found for ingredient "${mi.name}" — not in upload payload`);
-      return { ingredientId: id, quantity: 0, targetGrams: mi.grams };
+      return { ingredientId: id, quantity: 0, targetUnits: mi.units };
     });
 
     try {

@@ -27,23 +27,18 @@ const mockRefreshIngredients = vi.fn();
 const sampleIngredient = {
   id: 1,
   name: 'Chicken Breast',
-  quantity: 2,
-  price: 12,
-  weightPerQuantityGrams: 500,
-  stockWeightGrams: 1000,
-  totalWeightGrams: 1000,
-  pricePerGram: 0.012,
+  unit: 'lb',
+  pricePerUnit: 5,
+  stockUnits: 2,
   createdAt: '2024-01-01T00:00:00.000Z',
 };
 
 const cheaperIngredient = {
-  ...sampleIngredient,
   id: 2,
   name: 'Rice',
-  price: 8,
-  stockWeightGrams: 2000,
-  totalWeightGrams: 2000,
-  pricePerGram: 0.004,
+  unit: 'cup',
+  pricePerUnit: 0.15,
+  stockUnits: 4,
   createdAt: '2024-01-02T00:00:00.000Z',
 };
 
@@ -55,10 +50,10 @@ const sampleMeals = [
     servings: 2,
     createdAt: '2024-01-01T00:00:00.000Z',
     ingredients: [
-      { mealId: 1, ingredientId: 2, quantity: 200, ingredient: cheaperIngredient },
-      { mealId: 1, ingredientId: 1, quantity: 250, ingredient: sampleIngredient },
+      { mealId: 1, ingredientId: 2, quantity: 1, targetUnits: 1, ingredient: cheaperIngredient },
+      { mealId: 1, ingredientId: 1, quantity: 0.5, targetUnits: 0.5, ingredient: sampleIngredient },
     ],
-    cost: 3,
+    cost: 2.65,
   },
 ];
 
@@ -74,11 +69,11 @@ const samplePlan = {
       mealId: 1,
       dayOfWeek: 1,
       servings: 1,
-      snapshotCostPerServing: 1.5,
+      snapshotCostPerServing: 1.325,
       meal: sampleMeals[0],
     },
   ],
-  cost: 3,
+  cost: 2.65,
 };
 
 function setupMocks(mealOverrides = {}, ingredientOverrides = {}, planOverrides = {}) {
@@ -148,7 +143,7 @@ describe('MealsPage', () => {
 
     expect(screen.getByText('Grilled Chicken')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('$3.00')).toBeInTheDocument();
+    expect(screen.getByText('$2.65')).toBeInTheDocument();
   });
 
   it('shows meals assigned to the current week by default', () => {
@@ -171,7 +166,8 @@ describe('MealsPage', () => {
     expect(mockRefreshIngredients).toHaveBeenCalledOnce();
   });
 
-  it('expands a meal to show ingredients sorted by price per 100g descending', async () => {
+  it('expands a meal to show ingredients sorted by price per unit descending', async () => {
+    setupMocks({}, { items: [sampleIngredient, cheaperIngredient] });
     render(<MealsPage />);
 
     await addSampleMealFromHistory();
@@ -180,8 +176,8 @@ describe('MealsPage', () => {
     const chicken = screen.getByText('Chicken Breast');
     const rice = screen.getByText('Rice');
     expect(chicken.compareDocumentPosition(rice)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(screen.getByText('$1.20 / 100g')).toBeInTheDocument();
-    expect(screen.getByText('$0.40 / 100g')).toBeInTheDocument();
+    expect(screen.getByText('$5.00 / lb')).toBeInTheDocument();
+    expect(screen.getByText('$0.15 / cup')).toBeInTheDocument();
   });
 
   it('opens the New Meal form when the button is clicked', async () => {
@@ -194,15 +190,15 @@ describe('MealsPage', () => {
     expect(screen.getByLabelText(/servings/i)).toBeInTheDocument();
   });
 
-  it('submits a new meal with selected ingredients and grams used', async () => {
+  it('submits a new meal with selected ingredients and units used', async () => {
     const createdMeal = {
       ...sampleMeals[0],
       id: 2,
-      name: 'Pasta Salad',
+      name: 'Chicken Bowl',
       description: null,
       servings: 3,
-      ingredients: [{ mealId: 2, ingredientId: 1, quantity: 250, ingredient: sampleIngredient }],
-      cost: 3,
+      ingredients: [{ mealId: 2, ingredientId: 1, quantity: 0.5, targetUnits: 0.5, ingredient: sampleIngredient }],
+      cost: 2.5,
     };
     mockCreate.mockImplementation(async () => {
       setupMocks({ items: [...sampleMeals, createdMeal] });
@@ -213,48 +209,25 @@ describe('MealsPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
 
-    await userEvent.type(screen.getByLabelText(/^name/i), 'Pasta Salad');
+    await userEvent.type(screen.getByLabelText(/^name/i), 'Chicken Bowl');
     await userEvent.clear(screen.getByLabelText(/servings/i));
     await userEvent.type(screen.getByLabelText(/servings/i), '3');
 
-    // Select an ingredient from the dropdown
-    expect(screen.getByText(/price \/ 100g: --/i)).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText(/ingredient/i), '1');
-    expect(screen.getByText(/price \/ 100g: \$1.20/i)).toBeInTheDocument();
-    await userEvent.type(screen.getByPlaceholderText(/amount/i), '250');
+    await userEvent.type(screen.getByPlaceholderText(/amount/i), '0.5');
 
     await userEvent.click(screen.getByRole('button', { name: /create meal/i }));
 
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'Pasta Salad',
+      name: 'Chicken Bowl',
       servings: 3,
-      ingredients: [{ ingredientId: 1, quantity: 250 }],
+      ingredients: [{ ingredientId: 1, quantity: 0.5 }],
     }));
     expect(mockRefreshIngredients).toHaveBeenCalledOnce();
-    expect(screen.getByText('Pasta Salad')).toBeInTheDocument();
+    expect(screen.getByText('Chicken Bowl')).toBeInTheDocument();
   });
 
-  it('converts cups to grams before creating a meal', async () => {
-    mockCreate.mockResolvedValue({ ...sampleMeals[0], id: 2, name: 'Soup' });
-    mockRefreshIngredients.mockResolvedValue(undefined);
-    render(<MealsPage />);
-
-    await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
-
-    await userEvent.type(screen.getByLabelText(/^name/i), 'Soup');
-    await userEvent.selectOptions(screen.getByLabelText(/ingredient/i), '1');
-    await userEvent.type(screen.getByPlaceholderText(/amount/i), '1.5');
-    await userEvent.selectOptions(screen.getByLabelText(/amount unit/i), 'cup');
-
-    await userEvent.click(screen.getByRole('button', { name: /create meal/i }));
-
-    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'Soup',
-      ingredients: [{ ingredientId: 1, quantity: 354 }],
-    }));
-  });
-
-  it('fills all, half, and quarter of the remaining amount in grams', async () => {
+  it('fills all, half, and quarter of the remaining stock', async () => {
     render(<MealsPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
@@ -262,51 +235,18 @@ describe('MealsPage', () => {
     const amountInput = screen.getByPlaceholderText(/amount/i);
 
     await userEvent.click(screen.getByRole('button', { name: /all/i }));
-    expect(amountInput).toHaveValue(1000);
+    expect(amountInput).toHaveValue(2);
 
     await userEvent.click(screen.getByRole('button', { name: /1\/2/i }));
-    expect(amountInput).toHaveValue(500);
+    expect(amountInput).toHaveValue(1);
 
     await userEvent.click(screen.getByRole('button', { name: /1\/4/i }));
-    expect(amountInput).toHaveValue(250);
-  });
-
-  it('fills remaining amount fractions in cups when cups are selected', async () => {
-    render(<MealsPage />);
-
-    await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
-    await userEvent.selectOptions(screen.getByLabelText(/ingredient/i), '1');
-    await userEvent.selectOptions(screen.getByLabelText(/amount unit/i), 'cup');
-    const amountInput = screen.getByPlaceholderText(/amount/i);
-
-    await userEvent.click(screen.getByRole('button', { name: /1\/2/i }));
-
-    expect(amountInput).toHaveValue(2.113);
-  });
-
-  it('submits all remaining cups without exceeding available grams', async () => {
-    mockCreate.mockResolvedValue({ ...sampleMeals[0], id: 2, name: 'All Remaining Soup' });
-    mockRefreshIngredients.mockResolvedValue(undefined);
-    render(<MealsPage />);
-
-    await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
-    await userEvent.type(screen.getByLabelText(/^name/i), 'All Remaining Soup');
-    await userEvent.selectOptions(screen.getByLabelText(/ingredient/i), '1');
-    await userEvent.selectOptions(screen.getByLabelText(/amount unit/i), 'cup');
-    await userEvent.click(screen.getByRole('button', { name: /all/i }));
-    await userEvent.click(screen.getByRole('button', { name: /create meal/i }));
-
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    const body = mockCreate.mock.calls[0][0];
-    expect(body.name).toBe('All Remaining Soup');
-    expect(body.ingredients[0].ingredientId).toBe(1);
-    expect(body.ingredients[0].quantity).toBeLessThanOrEqual(1000);
-    expect(body.ingredients[0].quantity).toBe(999);
+    expect(amountInput).toHaveValue(0.5);
   });
 
   it('hides depleted ingredients when creating a meal', async () => {
     setupMocks({}, {
-      items: [{ ...sampleIngredient, stockWeightGrams: 0 }],
+      items: [{ ...sampleIngredient, stockUnits: 0 }],
     });
     render(<MealsPage />);
 
@@ -315,27 +255,27 @@ describe('MealsPage', () => {
     expect(screen.queryByRole('option', { name: /chicken breast/i })).not.toBeInTheDocument();
   });
 
-  it('shows floored whole grams in ingredient remaining labels', async () => {
+  it('shows floored units in ingredient remaining labels', async () => {
     setupMocks({}, {
-      items: [{ ...sampleIngredient, stockWeightGrams: 999.6 }],
+      items: [{ ...sampleIngredient, stockUnits: 1.999 }],
     });
     render(<MealsPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
 
-    expect(screen.getByRole('option', { name: /chicken breast \(999g remaining\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /chicken breast \(1.99 lb remaining\)/i })).toBeInTheDocument();
   });
 
-  it('prevents submitting more grams than are available', async () => {
+  it('prevents submitting more units than are available', async () => {
     render(<MealsPage />);
 
     await userEvent.click(screen.getByRole('button', { name: /new meal/i }));
     await userEvent.type(screen.getByLabelText(/^name/i), 'Too Much Chicken');
     await userEvent.selectOptions(screen.getByLabelText(/ingredient/i), '1');
-    await userEvent.type(screen.getByPlaceholderText(/amount/i), '1001');
+    await userEvent.type(screen.getByPlaceholderText(/amount/i), '3');
     await userEvent.click(screen.getByRole('button', { name: /create meal/i }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Chicken Breast only has 1000g available.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Chicken Breast only has 2 lb available.');
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
@@ -345,9 +285,7 @@ describe('MealsPage', () => {
     await addSampleMealFromHistory();
     await userEvent.click(screen.getByRole('button', { name: /edit/i }));
 
-    // The form heading should say Edit Meal
     expect(screen.getByRole('heading', { name: /edit meal/i })).toBeInTheDocument();
-    // The name field should be pre-populated
     expect(screen.getByDisplayValue('Grilled Chicken')).toBeInTheDocument();
   });
 

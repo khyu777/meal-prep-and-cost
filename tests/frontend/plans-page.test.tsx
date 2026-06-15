@@ -23,12 +23,9 @@ const mockRemove = vi.fn();
 const sampleIngredient = {
   id: 1,
   name: 'Chicken Breast',
-  quantity: 2,
-  price: 12,
-  weightPerQuantityGrams: 500,
-  stockWeightGrams: 1000,
-  totalWeightGrams: 1000,
-  pricePerGram: 0.012,
+  unit: 'lb',
+  pricePerUnit: 5,
+  stockUnits: 2,
   createdAt: '2024-01-01T00:00:00.000Z',
 };
 
@@ -38,8 +35,8 @@ const sampleMeal = {
   description: null,
   servings: 2,
   createdAt: '2024-01-01T00:00:00.000Z',
-  ingredients: [{ mealId: 1, ingredientId: 1, quantity: 250, ingredient: sampleIngredient }],
-  cost: 3,
+  ingredients: [{ mealId: 1, ingredientId: 1, quantity: 0.5, targetUnits: 0.5, ingredient: sampleIngredient }],
+  cost: 2.5,
 };
 
 const samplePlans = [

@@ -23,7 +23,6 @@ jest.mock('../../backend/models/prisma-client', () => {
       mealIngredient,
       mealPlanItem,
       ingredient,
-      // $transaction executes the callback with the same shared mock objects
       $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) =>
         fn({ meal, mealIngredient, mealPlanItem, ingredient })
       ),
@@ -46,18 +45,17 @@ function buildApp() {
 const sampleIngredient = {
   id: 1,
   name: 'Chicken Breast',
-  quantity: 2,
-  price: 12,
-  weightPerQuantityGrams: 500,
-  stockWeightGrams: 1000,
+  unit: 'lb',
+  pricePerUnit: 5,
+  stockUnits: 2,
   createdAt: new Date('2024-01-01'),
 };
 
 const sampleMealIngredient = {
   mealId: 1,
   ingredientId: 1,
-  quantity: 250,
-  targetGrams: 250,
+  quantity: 0.5,
+  targetUnits: 0.5,
   ingredient: sampleIngredient,
 };
 
@@ -89,10 +87,10 @@ describe('Meals API', () => {
       expect(res.body).toMatchObject({ error: null, status: 200 });
       expect(Array.isArray(res.body.data)).toBe(true);
       expect(res.body.data[0]).toHaveProperty('cost');
-      expect(res.body.data[0].cost).toBe(3);
+      // cost = 0.5 units × $5/unit = $2.50
+      expect(res.body.data[0].cost).toBe(2.5);
       expect(res.body.data[0].name).toBe('Grilled Chicken');
-      expect(res.body.data[0].ingredients[0].ingredient.pricePerGram).toBe(0.012);
-      expect(res.body.data[0].ingredients[0].ingredient.totalWeightGrams).toBe(1000);
+      expect(res.body.data[0].ingredients[0].ingredient.pricePerUnit).toBe(5);
     });
   });
 
@@ -105,7 +103,7 @@ describe('Meals API', () => {
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ error: null, status: 200 });
       expect(res.body.data).toHaveProperty('cost');
-      expect(res.body.data.cost).toBe(3);
+      expect(res.body.data.cost).toBe(2.5);
       expect(res.body.data.name).toBe('Grilled Chicken');
     });
 
@@ -129,7 +127,7 @@ describe('Meals API', () => {
         .send({
           name: 'Grilled Chicken',
           servings: 2,
-          ingredients: [{ ingredientId: 1, quantity: 250 }],
+          ingredients: [{ ingredientId: 1, quantity: 0.5 }],
         });
 
       expect(res.status).toBe(201);
@@ -137,14 +135,14 @@ describe('Meals API', () => {
       expect(res.body.data).toHaveProperty('cost');
       expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { stockWeightGrams: { decrement: 250 } },
+        data: { stockUnits: { decrement: 0.5 } },
       });
     });
 
     it('returns 422 when ingredient stock is insufficient', async () => {
       (mockPrisma.ingredient.findUnique as jest.Mock).mockResolvedValue({
         ...sampleIngredient,
-        stockWeightGrams: 100,
+        stockUnits: 0.25,
       });
 
       const res = await request(buildApp())
@@ -152,7 +150,7 @@ describe('Meals API', () => {
         .send({
           name: 'Grilled Chicken',
           servings: 2,
-          ingredients: [{ ingredientId: 1, quantity: 250 }],
+          ingredients: [{ ingredientId: 1, quantity: 0.5 }],
         });
 
       expect(res.status).toBe(422);
@@ -175,7 +173,7 @@ describe('Meals API', () => {
         .send({
           name: 'Grilled Chicken',
           servings: 0,
-          ingredients: [{ ingredientId: 1, quantity: 250 }],
+          ingredients: [{ ingredientId: 1, quantity: 0.5 }],
         });
 
       expect(res.status).toBe(400);
@@ -194,7 +192,7 @@ describe('Meals API', () => {
         .put('/api/meals/1')
         .send({
           name: 'Updated Chicken',
-          ingredients: [{ ingredientId: 1, quantity: 400 }],
+          ingredients: [{ ingredientId: 1, quantity: 0.8 }],
         });
 
       expect(res.status).toBe(200);
@@ -202,11 +200,11 @@ describe('Meals API', () => {
       expect(res.body.data.name).toBe('Updated Chicken');
       expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { stockWeightGrams: { increment: 250 } },
+        data: { stockUnits: { increment: 0.5 } },
       });
       expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { stockWeightGrams: { decrement: 400 } },
+        data: { stockUnits: { decrement: 0.8 } },
       });
     });
 
@@ -256,7 +254,7 @@ describe('Meals API', () => {
   });
 
   describe('DELETE /api/meals/:id', () => {
-    it('deletes a meal and cascades to MealIngredient rows', async () => {
+    it('deletes a meal and restores ingredient stock', async () => {
       (mockPrisma.meal.delete as jest.Mock).mockResolvedValue(sampleMeal);
 
       const res = await request(buildApp()).delete('/api/meals/1');
@@ -269,7 +267,7 @@ describe('Meals API', () => {
       });
       expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { stockWeightGrams: { increment: 250 } },
+        data: { stockUnits: { increment: 0.5 } },
       });
     });
 
@@ -289,18 +287,18 @@ describe('Meals API', () => {
   });
 
   describe('POST /api/meals/auto-portion', () => {
-    it('distributes stock plus selected meal quantities proportional to targetGrams', async () => {
-      // Two meals each using the same ingredient with targetGrams 250 and 750
-      const mi1 = { ...sampleMealIngredient, mealId: 1, quantity: 100, targetGrams: 250 };
-      const mi2 = { ...sampleMealIngredient, mealId: 2, quantity: 100, targetGrams: 750 };
+    it('distributes stock plus selected meal quantities proportional to targetUnits', async () => {
+      // Two meals each using the same ingredient with targetUnits 0.25 and 0.75
+      const mi1 = { ...sampleMealIngredient, mealId: 1, quantity: 0.1, targetUnits: 0.25 };
+      const mi2 = { ...sampleMealIngredient, mealId: 2, quantity: 0.1, targetUnits: 0.75 };
 
       (mockPrisma.mealIngredient.findMany as jest.Mock)
-        .mockResolvedValueOnce([mi1, mi2]);   // target meals
+        .mockResolvedValueOnce([mi1, mi2]);
 
       (mockPrisma.mealIngredient.update as jest.Mock).mockResolvedValue({});
       (mockPrisma.meal.findMany as jest.Mock).mockResolvedValue([
-        { ...sampleMeal, id: 1, ingredients: [{ ...mi1, quantity: 300 }] },
-        { ...sampleMeal, id: 2, ingredients: [{ ...mi2, quantity: 900 }] },
+        { ...sampleMeal, id: 1, ingredients: [{ ...mi1, quantity: 0.5 }] },
+        { ...sampleMeal, id: 2, ingredients: [{ ...mi2, quantity: 1.5 }] },
       ]);
 
       const res = await request(buildApp())
@@ -309,33 +307,34 @@ describe('Meals API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ error: null, status: 200 });
-      // Pool: 1000g remaining stock + 200g already assigned to selected meals.
+      // Pool: 2 stockUnits + 0.2 already assigned = 2.2 units total
+      // mi1 gets 0.25/1.0 × 2.2 = 0.55; mi2 gets 0.75/1.0 × 2.2 = 1.65
       expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { quantity: 300 } })
+        expect.objectContaining({ data: { quantity: 0.55 } })
       );
       expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { quantity: 900 } })
+        expect.objectContaining({ data: { quantity: 1.65 } })
       );
       expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
         where: { id: 1 },
-        data: { stockWeightGrams: 0 },
+        data: { stockUnits: 0 },
       });
     });
 
     it('is idempotent when re-run because selected meal quantities are re-pooled', async () => {
-      const ingredientWithNoRemainingStock = { ...sampleIngredient, stockWeightGrams: 0 };
+      const ingredientWithNoRemainingStock = { ...sampleIngredient, stockUnits: 0 };
       const mi1 = {
         ...sampleMealIngredient,
         mealId: 1,
-        quantity: 300,
-        targetGrams: 250,
+        quantity: 0.55,
+        targetUnits: 0.25,
         ingredient: ingredientWithNoRemainingStock,
       };
       const mi2 = {
         ...sampleMealIngredient,
         mealId: 2,
-        quantity: 900,
-        targetGrams: 750,
+        quantity: 1.65,
+        targetUnits: 0.75,
         ingredient: ingredientWithNoRemainingStock,
       };
 
@@ -352,39 +351,36 @@ describe('Meals API', () => {
 
       expect(res.status).toBe(200);
       expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { quantity: 300 } })
+        expect.objectContaining({ data: { quantity: 0.55 } })
       );
       expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { quantity: 900 } })
+        expect.objectContaining({ data: { quantity: 1.65 } })
       );
-      expect(mockPrisma.ingredient.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { stockWeightGrams: 0 },
-      });
     });
 
-    it('uses largest remainder allocation and leaves fractional grams in stock', async () => {
-      const ingredientWithFractionalStock = { ...sampleIngredient, stockWeightGrams: 1000.6 };
+    it('uses largest-remainder allocation and leaves fractional units in stock', async () => {
+      // 1.006 units available, split 1:2 ratio → 0.34 + 0.67 = 1.01, leftover ≈ 0
+      const ingredientWithFractionalStock = { ...sampleIngredient, stockUnits: 1.006 };
       const mi1 = {
         ...sampleMealIngredient,
         mealId: 1,
         quantity: 0,
-        targetGrams: 1,
+        targetUnits: 1,
         ingredient: ingredientWithFractionalStock,
       };
       const mi2 = {
         ...sampleMealIngredient,
         mealId: 2,
         quantity: 0,
-        targetGrams: 2,
+        targetUnits: 2,
         ingredient: ingredientWithFractionalStock,
       };
 
       (mockPrisma.mealIngredient.findMany as jest.Mock).mockResolvedValueOnce([mi1, mi2]);
       (mockPrisma.mealIngredient.update as jest.Mock).mockResolvedValue({});
       (mockPrisma.meal.findMany as jest.Mock).mockResolvedValue([
-        { ...sampleMeal, id: 1, ingredients: [{ ...mi1, quantity: 333 }] },
-        { ...sampleMeal, id: 2, ingredients: [{ ...mi2, quantity: 667 }] },
+        { ...sampleMeal, id: 1, ingredients: [{ ...mi1, quantity: 0.33 }] },
+        { ...sampleMeal, id: 2, ingredients: [{ ...mi2, quantity: 0.67 }] },
       ]);
 
       const res = await request(buildApp())
@@ -393,24 +389,24 @@ describe('Meals API', () => {
 
       expect(res.status).toBe(200);
       expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { quantity: 333 } })
+        expect.objectContaining({ data: { quantity: 0.33 } })
       );
       expect(mockPrisma.mealIngredient.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { quantity: 667 } })
+        expect.objectContaining({ data: { quantity: 0.67 } })
       );
-      const stockUpdate = (mockPrisma.ingredient.update as jest.Mock).mock.calls[0][0];
-      expect(stockUpdate.where).toEqual({ id: 1 });
-      expect(stockUpdate.data.stockWeightGrams).toBeCloseTo(0.6);
+      // 1.006 − 1.00 = 0.006 remainder stays in stock
+      const stockCall = (mockPrisma.ingredient.update as jest.Mock).mock.calls[0][0];
+      expect(stockCall.where).toEqual({ id: 1 });
+      expect(stockCall.data.stockUnits).toBeCloseTo(0.006, 3);
     });
 
     it('does not update meals outside the selected meal IDs', async () => {
-      const selected = { ...sampleMealIngredient, mealId: 1, quantity: 0, targetGrams: 250 };
-      const outside = { ...sampleMealIngredient, mealId: 99, quantity: 800, targetGrams: 800 };
+      const selected = { ...sampleMealIngredient, mealId: 1, quantity: 0, targetUnits: 0.25 };
 
       (mockPrisma.mealIngredient.findMany as jest.Mock).mockResolvedValueOnce([selected]);
       (mockPrisma.mealIngredient.update as jest.Mock).mockResolvedValue({});
       (mockPrisma.meal.findMany as jest.Mock).mockResolvedValue([
-        { ...sampleMeal, id: 1, ingredients: [{ ...selected, quantity: 1000 }] },
+        { ...sampleMeal, id: 1, ingredients: [{ ...selected, quantity: 2 }] },
       ]);
 
       const res = await request(buildApp())
@@ -424,7 +420,7 @@ describe('Meals API', () => {
       });
       expect(mockPrisma.mealIngredient.update).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { mealId_ingredientId: { mealId: outside.mealId, ingredientId: outside.ingredientId } },
+          where: { mealId_ingredientId: { mealId: 99, ingredientId: 1 } },
         })
       );
     });

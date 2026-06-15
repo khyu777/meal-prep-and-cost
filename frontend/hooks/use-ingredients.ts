@@ -6,16 +6,16 @@ import type { Ingredient } from '../utils/types';
 
 interface CreateIngredientBody {
   name: string;
-  quantity: number;
-  price: number;
-  weightPerQuantityGrams: number;
+  unit: string;
+  pricePerUnit: number;
+  stockUnits?: number;
 }
 
 interface UpdateIngredientBody {
   name?: string;
-  quantity?: number;
-  price?: number;
-  weightPerQuantityGrams?: number;
+  unit?: string;
+  pricePerUnit?: number;
+  stockUnits?: number;
 }
 
 interface UseIngredients {
