@@ -136,11 +136,18 @@ Return JSON only. No preamble, no markdown fences.
 
 ## Phase 1 — Grocery List Generation
 
+**Required computation order:**
+1. Assign per-meal `units` for every ingredient in every meal (these go into `tracker_upload.meals[].ingredients[].units`)
+2. For each ingredient, sum its `units` across all meals: `Σ units`
+3. `grocery_list[].quantity` = `ceil(Σ units)`, minimum 1 — derived directly from step 2
+4. `tracker_upload.ingredients[].quantity` must equal `grocery_list[].quantity` for every ingredient
+
+Never set grocery quantities from an eyeballed "batch size" or recipe yield. The only valid source is the sum computed in step 2.
+
 ### Meal prep mode (`meal_prep: true`)
-- Scale ingredient quantities to **batch size** — enough to cover all meals that share that ingredient across the week, not per-meal quantities
-- "Batch size" = the **sum of per-meal units** across every meal that uses the ingredient, rounded up to the whole purchasable unit (see "Buy to match usage" below). It is NOT an eyeballed bulk number — buying "3 lbs chicken" when the meals only use ~1 lb is wrong
-- Example: if chicken thighs appear in 4 meals, quantity = ceil(total lb needed for all 4) — not a round bulk figure
-- Grocery list still deduplicates and aggregates as normal — batch scaling happens before aggregation
+- Per-meal `units` are per-serving amounts (one adult), not batch-sized
+- `recipe_ingredients` uses the same quantities as the grocery list — `ceil(Σ per-meal units)` — because that is how much you actually cook in the batch session
+- The "batch" concept is expressed in the step text (e.g., "Cook 2 lbs chicken thighs in one session — use across Days 1, 2, 4"), not by inflating quantities above actual usage
 
 ### Decomposition
 - Break every meal into component ingredients with realistic home-cooking quantities
@@ -322,9 +329,9 @@ comes straight from it.
 ## Phase 4 — Recipe Generation
 
 ### Meal prep mode (`meal_prep: true`)
-- `recipe_ingredients` quantities should reflect **batch size** (enough for all meals using that ingredient)
+- `recipe_ingredients` quantities are the same as grocery list quantities — actual total usage, not inflated
 - `steps` should be written as batch cooking instructions:
-  - Lead with the batch cook step (e.g. "Cook 3 lbs chicken thighs in bulk — use across Day 1 dinner, Day 2 lunch, Day 3 lunch")
+  - Lead with the batch cook step, using the actual quantity (e.g. "Cook 2 lbs chicken thighs in one session — use across Day 1 dinner, Day 2 lunch, Day 4 dinner")
   - Include storage instructions at the end of each recipe: fridge shelf life and whether it freezes well
   - Example storage note: "Store in airtight container — fridge 4 days, freezer 2 months."
   - Combine shared batch components into one recipe (e.g. one "Batch: Roasted Chicken Thighs" recipe referenced by multiple meals, rather than repeating steps)
