@@ -38,7 +38,20 @@ AskUserQuestion({
 
 ## Step 2 — Choose week
 
-Ask the user which week this plan is for:
+Before asking, compute the two Sunday dates with this exact bash command:
+
+```bash
+python3 -c "
+from datetime import date, timedelta
+today = date.today()
+this_sunday = today - timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today
+next_sunday = this_sunday + timedelta(days=7)
+print(this_sunday.isoformat())
+print(next_sunday.isoformat())
+"
+```
+
+Use the two printed dates as `THIS_SUNDAY` and `NEXT_SUNDAY`. Then ask:
 
 ```
 AskUserQuestion({
@@ -48,8 +61,8 @@ AskUserQuestion({
       "header": "Plan week",
       "multiSelect": false,
       "options": [
-        { "label": "This week", "description": "Week starting this Sunday" },
-        { "label": "Next week", "description": "Week starting next Sunday" },
+        { "label": "This week", "description": "Week starting <THIS_SUNDAY>" },
+        { "label": "Next week", "description": "Week starting <NEXT_SUNDAY>" },
         { "label": "Custom date", "description": "Enter a specific Sunday (YYYY-MM-DD)" }
       ]
     }
@@ -57,9 +70,9 @@ AskUserQuestion({
 })
 ```
 
-Compute `weekStart` as a `YYYY-MM-DD` string:
-- "This week" → if today is Sunday, use today; otherwise use the most recent past Sunday
-- "Next week" → 7 days after "this week" Sunday
+Set `weekStart`:
+- "This week" → `THIS_SUNDAY`
+- "Next week" → `NEXT_SUNDAY`
 - "Custom date" → ask for the date via a follow-up free-text prompt
 
 ---

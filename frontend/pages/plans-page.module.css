@@ -251,6 +251,20 @@
   background: #bbdefb;
 }
 
+.deleteBtn {
+  padding: 0.3rem 0.75rem;
+  background: #fce4ec;
+  color: #b71c1c;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.deleteBtn:hover {
+  background: #ffcdd2;
+}
+
 /* 7-column card grid */
 .cardWeekGrid {
   display: grid;

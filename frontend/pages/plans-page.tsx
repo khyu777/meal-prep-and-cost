@@ -39,7 +39,7 @@ function autoName(weekStart: Date): string {
 }
 
 export default function PlansPage() {
-  const { items: allPlans, loading: plansLoading, error: plansError, create, update } = usePlans();
+  const { items: allPlans, loading: plansLoading, error: plansError, create, update, remove } = usePlans();
   const { items: meals, loading: mealsLoading } = useMeals();
   const { weekStart, weekEnd } = useWeek();
   const nextKeyRef = useRef(100);
@@ -231,6 +231,7 @@ export default function PlansPage() {
                     {refreshing ? 'Refreshing…' : 'Refresh Prices'}
                   </button>
                   <button className={styles.editBtn} onClick={() => openEdit(plan)}>Edit</button>
+                  <button className={styles.deleteBtn} onClick={() => { if (confirm('Delete this plan?')) remove(plan.id); }}>Delete</button>
                 </div>
               </div>
             </div>

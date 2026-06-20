@@ -292,7 +292,21 @@ Append a `tracker_upload` object to the JSON output. This is what the importer
 }
 ```
 
-`day_of_week` maps brainstormer `day` directly to the integer (Day 1 → 1, Day 2 → 2, …). Use the same value for both lunch and dinner on the same day. 0 = Sunday, 1 = Monday, …, 6 = Saturday.
+`day_of_week` maps brainstormer `day` directly to the integer (Day 1 → 1, Day 2 → 2, …). **Both lunch AND dinner on the same day MUST have the same `day_of_week` value.** 0 = Sunday, 1 = Monday, …, 6 = Saturday.
+
+CORRECT (Day 1 lunch + dinner both get day_of_week 1):
+```
+{ "name": "Meal A (Day 1 lunch)", "day_of_week": 1 }
+{ "name": "Meal B (Day 1 dinner)", "day_of_week": 1 }
+{ "name": "Meal C (Day 2 lunch)", "day_of_week": 2 }
+{ "name": "Meal D (Day 2 dinner)", "day_of_week": 2 }
+```
+WRONG (do not increment day_of_week for each meal individually):
+```
+{ "name": "Meal A", "day_of_week": 1 }
+{ "name": "Meal B", "day_of_week": 2 }  ← WRONG, should be 1
+{ "name": "Meal C", "day_of_week": 3 }  ← WRONG, should be 2
+```
 
 The tracker is **fully unit-based** — there are no grams. Each ingredient has one
 natural purchasable `unit`, a `price_per_unit`, and meals consume a number of those

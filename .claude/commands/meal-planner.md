@@ -385,7 +385,18 @@ AskUserQuestion({
 ```
 
 **If "Yes":**
-1. Ask which week this plan is for:
+1. Compute the two Sunday dates with this exact bash command:
+```bash
+python3 -c "
+from datetime import date, timedelta
+today = date.today()
+this_sunday = today - timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today
+next_sunday = this_sunday + timedelta(days=7)
+print(this_sunday.isoformat())
+print(next_sunday.isoformat())
+"
+```
+Use the two printed dates as `THIS_SUNDAY` and `NEXT_SUNDAY`. Then ask:
 ```
 AskUserQuestion({
   "questions": [
@@ -394,15 +405,15 @@ AskUserQuestion({
       "header": "Plan week",
       "multiSelect": false,
       "options": [
-        { "label": "This week", "description": "Week starting this Sunday" },
-        { "label": "Next week", "description": "Week starting next Sunday" },
+        { "label": "This week", "description": "Week starting <THIS_SUNDAY>" },
+        { "label": "Next week", "description": "Week starting <NEXT_SUNDAY>" },
         { "label": "Custom date", "description": "Enter a specific Sunday (YYYY-MM-DD)" }
       ]
     }
   ]
 })
 ```
-Compute `weekStart` as `YYYY-MM-DD`: "This week" → most recent Sunday on or before today; "Next week" → 7 days after; "Custom date" → ask via follow-up prompt.
+Set `weekStart`: "This week" → `THIS_SUNDAY`; "Next week" → `NEXT_SUNDAY`; "Custom date" → ask via follow-up prompt.
 
 2. Run: `curl -s http://localhost:3002/health`
    - If that fails, tell the user: "The backend isn't running. Start it with `npm run dev` in the `backend/` folder, then run `/meal-uploader` to upload."
